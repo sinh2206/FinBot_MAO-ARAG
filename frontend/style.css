@@ -1,0 +1,440 @@
+/* Reset & base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #0a0c10;
+    color: #e1e9f0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* App container */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background-color: #101318;
+    border-right: 1px solid #2a2f38;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.sidebar-header {
+    padding: 24px 16px;
+    border-bottom: 1px solid #2a2f38;
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #00b8ff;
+    margin-bottom: 4px;
+}
+
+.sidebar-header h2 i {
+    margin-right: 8px;
+    color: #00b8ff;
+}
+
+.version {
+    font-size: 0.7rem;
+    color: #6b7a8f;
+    letter-spacing: 0.3px;
+}
+
+.history-list {
+    flex: 1;
+    padding: 16px 8px;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: #b4c0d0;
+    font-size: 0.9rem;
+}
+
+.history-item i {
+    font-size: 1rem;
+    width: 20px;
+    color: #4e5e73;
+}
+
+.history-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-item:hover {
+    background-color: #1e242c;
+}
+
+.history-item.active {
+    background-color: #1f2a36;
+    color: white;
+    border-left: 3px solid #00b8ff;
+}
+
+.sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid #2a2f38;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #b4c0d0;
+    font-size: 0.9rem;
+}
+
+.user-info i {
+    font-size: 1.5rem;
+    color: #4e5e73;
+}
+
+/* Chat area */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #0e1217;
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #2a2f38;
+    background-color: rgba(14, 18, 23, 0.8);
+    backdrop-filter: blur(5px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.chat-header h1 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #e1e9f0;
+}
+
+.status {
+    font-size: 0.75rem;
+    color: #00b8ff;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #00b8ff;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Messages container */
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    scroll-behavior: smooth;
+}
+
+/* Message styles */
+.message {
+    display: flex;
+    gap: 16px;
+    max-width: 85%;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.message.assistant {
+    align-self: flex-start;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #1f2a36;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.message.user .avatar {
+    background-color: #00b8ff;
+    color: #0e1217;
+}
+
+.message.assistant .avatar {
+    background-color: #2d3748;
+    color: #00b8ff;
+}
+
+.message-content {
+    background-color: #1a212a;
+    padding: 12px 16px;
+    border-radius: 18px;
+    border-top-left-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    line-height: 1.5;
+    font-size: 0.95rem;
+    overflow-wrap: break-word;
+}
+
+.message.user .message-content {
+    background-color: #00b8ff;
+    color: #0e1217;
+    border-top-right-radius: 4px;
+    border-top-left-radius: 18px;
+}
+
+.message-content p {
+    margin-bottom: 8px;
+}
+
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Markdown styling */
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+    margin-top: 12px;
+    margin-bottom: 8px;
+    color: #f0f6fc;
+}
+
+.message-content h1 { font-size: 1.4rem; }
+.message-content h2 { font-size: 1.2rem; }
+.message-content h3 { font-size: 1.1rem; }
+
+.message-content ul, 
+.message-content ol {
+    margin-left: 20px;
+    margin-bottom: 8px;
+}
+
+.message-content code {
+    background-color: #2d3748;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #e6b450;
+}
+
+.message-content pre {
+    background-color: #11161e;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+    border: 1px solid #2a2f38;
+}
+
+.message-content blockquote {
+    border-left: 4px solid #00b8ff;
+    padding-left: 12px;
+    color: #b4c0d0;
+    font-style: italic;
+    margin: 12px 0;
+}
+
+/* Bảng tài chính */
+.message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.9rem;
+    border: 1px solid #2a2f38;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.message-content th {
+    background-color: #1f2a36;
+    color: #00b8ff;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 2px solid #2a3a4a;
+}
+
+.message-content td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #2a2f38;
+}
+
+.message-content tr:last-child td {
+    border-bottom: none;
+}
+
+.message-content tr:hover td {
+    background-color: #1e242c;
+}
+
+/* Ảnh biểu đồ */
+.message-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    margin: 16px 0;
+    border: 1px solid #2a3a4a;
+}
+
+/* Thông tin phụ (cost, time) */
+.message-footer {
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: #6b7a8f;
+    display: flex;
+    gap: 12px;
+    font-style: italic;
+    border-top: 1px dashed #2a2f38;
+    padding-top: 6px;
+}
+
+/* Input area */
+.input-area {
+    display: flex;
+    padding: 16px 24px;
+    background-color: #101318;
+    border-top: 1px solid #2a2f38;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.input-area textarea {
+    flex: 1;
+    background-color: #1a212a;
+    border: 1px solid #2a2f38;
+    border-radius: 24px;
+    padding: 12px 20px;
+    color: #e1e9f0;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    resize: none;
+    max-height: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+}
+
+.input-area textarea:focus {
+    border-color: #00b8ff;
+}
+
+.input-area button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #00b8ff;
+    border: none;
+    color: #0e1217;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-area button:hover {
+    background-color: #33ccff;
+}
+
+.input-area button:active {
+    transform: scale(0.95);
+}
+
+.input-area button:disabled {
+    background-color: #2a2f38;
+    cursor: not-allowed;
+    color: #6b7a8f;
+}
+
+.disclaimer {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #4e5e73;
+    padding: 8px 24px 16px;
+    border-top: 1px solid #1e242c;
+}
+
+/* Loading message (simulated steps) */
+.loading-step {
+    color: #00b8ff;
+    font-weight: 500;
+}
+
+.loading-step i {
+    margin-right: 6px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #101318;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2a2f38;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3a4455;
+}

@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "query": "Giá cổ phiếu HPG hôm nay là bao nhiêu?",
+        "expected_answer": "Giá cổ phiếu HPG hôm nay (27/02/2025) là 27,500 VNĐ.",
+        "expected_workflow": ["financial_agent", "generator"]
+    },
+    {
+        "id": 2,
+        "query": "So sánh chỉ số P/E của VNM và MSN năm 2024",
+        "expected_answer": "Năm 2024, P/E của VNM là 18.2, của MSN là 15.7. Như vậy VNM có P/E cao hơn MSN.",
+        "expected_workflow": ["query_rewriter", "retriever", "doc_ranker", "financial_agent", "generator"]
+    },
+    {
+        "id": 3,
+        "query": "Tính giá trị nội tại của cổ phiếu FPT theo phương pháp DCF với các giả định: tốc độ tăng trưởng 10% trong 5 năm, chi phí vốn 12%",
+        "expected_answer": "Giá trị nội tại của FPT theo DCF là khoảng 85,000 VNĐ.",
+        "expected_workflow": ["math_coder", "generator"]
+    }
+]
