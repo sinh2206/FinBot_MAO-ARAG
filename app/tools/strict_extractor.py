@@ -1,6 +1,6 @@
 """
 StrictExtractor: Trích xuất chính xác các chỉ số tài chính từ văn bản, không suy luận.
-Sử dụng Structured Output của LLM để đảm bảo định dạng.
+Kết quả luôn kèm nguồn gốc (tên file, trang) để chống hallucination.
 """
 
 import logging
@@ -13,23 +13,23 @@ logger = logging.getLogger(__name__)
 
 
 class FinancialMetric(BaseModel):
-    """Một chỉ số tài chính được trích xuất từ văn bản."""
+    """Một chỉ số tài chính được trích xuất từ văn bản, kèm nguồn gốc."""
     metric_name: str = Field(description="Tên chỉ số, ví dụ: 'Lợi nhuận sau thuế', 'Doanh thu', 'EPS'")
     value: float = Field(description="Giá trị số của chỉ số")
     unit: str = Field(description="Đơn vị (tỷ, triệu, %, ... hoặc rỗng nếu không có)")
     source_document: str = Field(description="Tên tài liệu gốc (nếu biết, có thể là 'Unknown')")
     page_number: Optional[int] = Field(None, description="Số trang (nếu có)")
+    # Không cần thêm flag mô phỏng ở đây vì nó đã thể hiện qua source_document
 
 
 class StrictExtractor:
     """
     Công cụ trích xuất chỉ số tài chính chỉ dựa trên văn bản gốc,
-    không suy luận, không tính toán.
+    không suy luận, không tính toán. Mỗi metric trả về đều kèm nguồn.
     """
 
     def __init__(self, model_name: str = "gemini-1.5-flash-latest"):
         self.llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.0)
-        # Sử dụng structured output để đảm bảo output đúng schema
         self.llm_with_structure = self.llm.with_structured_output(List[FinancialMetric])
 
         self.prompt = ChatPromptTemplate.from_messages([
@@ -37,8 +37,11 @@ class StrictExtractor:
 BẠN KHÔNG ĐƯỢC SUY LUẬN HAY TÍNH TOÁN.
 Chỉ trích xuất những con số, chỉ số có sẵn trong văn bản gốc.
 Nếu văn bản không chứa dữ liệu, hãy trả về danh sách rỗng.
+
 Metadata đã cho bao gồm tên file và số trang (nếu có). Hãy điền vào các trường source_document và page_number từ metadata.
 Chú ý: Không tự thêm đơn vị nếu không có; để trống hoặc ghi là 'unknown'.
+Nếu tên file chứa từ "simulated" (ví dụ: simulated_data.pdf), điều đó có nghĩa dữ liệu là mô phỏng – vẫn giữ nguyên tên file trong source_document.
+
 Danh sách các chỉ số trả về phải là mảng các object theo schema FinancialMetric.
 """),
             ("human", "Đoạn văn: {text}\nMetadata: {metadata}")

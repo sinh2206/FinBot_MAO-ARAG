@@ -3,93 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAO-ARAG - Trợ lý Chứng khoán</title>
-    <!-- Font và icon -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Marked.js để render Markdown -->
+    <title>MAO-ARAG</title>
+    <link rel="stylesheet" href="/frontend/style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- CSS chính -->
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar bên trái -->
-        <aside class="sidebar">
+    <div class="app-wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar">
             <div class="sidebar-header">
-                <h2><i class="fas fa-chart-line"></i> MAO-ARAG</h2>
-                <p class="version">v1.0 · Chứng khoán</p>
+                <button id="new-chat-btn">
+                    <i class="fa-regular fa-pen-to-square"></i>
+                    <span>Đoạn chat mới</span>
+                </button>
             </div>
-            <div class="history-list" id="historyList">
-                <!-- Lịch sử chat sẽ được load và render ở đây -->
-                <div class="history-item active">
-                    <i class="fas fa-message"></i>
-                    <span>Giá HPG hôm nay?</span>
-                </div>
-                <div class="history-item">
-                    <i class="fas fa-message"></i>
-                    <span>So sánh VNM và MSN</span>
-                </div>
-                <div class="history-item">
-                    <i class="fas fa-message"></i>
-                    <span>DCF FPT</span>
-                </div>
+
+            <div class="history-label">Hôm nay</div>
+            <div id="chat-history-list" class="history-container">
+                <!-- Javascript render history here -->
             </div>
+
             <div class="sidebar-footer">
-                <div class="user-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span>Anonymous</span>
-                </div>
+                <button id="open-sub-modal" class="user-menu-btn">
+                    <div class="user-avatar"><i class="fa-regular fa-user"></i></div>
+                    <div class="user-info">
+                        <span class="user-name">Nhà đầu tư</span>
+                        <span class="user-status">Đăng ký bản tin</span>
+                    </div>
+                </button>
             </div>
-        </aside>
+        </div>
 
-        <!-- Main Chat Area -->
-        <main class="chat-area">
-            <!-- Header của chat -->
-            <header class="chat-header">
-                <h1>Trợ lý Phân tích Chứng khoán</h1>
-                <p class="status">Online · Gemini AI</p>
-            </header>
-
-            <!-- Vùng hiển thị tin nhắn -->
-            <div class="messages-container" id="messagesContainer">
-                <!-- Tin nhắn mẫu (sẽ bị xóa khi chạy JS) -->
-                <div class="message assistant">
-                    <div class="avatar"><i class="fas fa-robot"></i></div>
-                    <div class="message-content">
-                        <p>Xin chào! Tôi là trợ lý AI chuyên phân tích chứng khoán. Bạn có thể hỏi tôi về:</p>
-                        <ul>
-                            <li>Giá cổ phiếu realtime (HPG, VNM, FPT...)</li>
-                            <li>So sánh các doanh nghiệp</li>
-                            <li>Phân tích báo cáo tài chính</li>
-                            <li>Tính định giá DCF, Graham</li>
-                            <li>Vẽ biểu đồ kỹ thuật</li>
-                        </ul>
-                        <p><em>Hãy đặt câu hỏi để bắt đầu!</em></p>
+        <!-- Main Content -->
+        <div class="main-content">
+            
+            <!-- Màn hình chào mừng -->
+            <div id="welcome-screen" class="welcome-screen">
+                <div class="brand-icon"><i class="fa-solid fa-bolt"></i></div>
+                <h2>Tôi có thể giúp gì cho bạn hôm nay?</h2>
+                
+                <div class="suggestion-grid">
+                    <div class="suggestion-card" onclick="setInput('Phân tích cổ phiếu FPT')">
+                        <div class="s-icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <div class="s-text">Phân tích cổ phiếu FPT</div>
+                    </div>
+                    <div class="suggestion-card" onclick="setInput('Tình hình vĩ mô hiện tại')">
+                        <div class="s-icon"><i class="fa-solid fa-earth-americas"></i></div>
+                        <div class="s-text">Tình hình vĩ mô hiện tại</div>
+                    </div>
+                    <div class="suggestion-card" onclick="setInput('So sánh HPG và HSG')">
+                        <div class="s-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <div class="s-text">So sánh HPG và HSG</div>
+                    </div>
+                    <div class="suggestion-card" onclick="setInput('Lãi suất ngân hàng nào cao nhất?')">
+                        <div class="s-icon"><i class="fa-solid fa-percent"></i></div>
+                        <div class="s-text">Lãi suất ngân hàng</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Input area -->
-            <div class="input-area">
-                <textarea 
-                    id="queryInput" 
-                    placeholder="Nhập câu hỏi về chứng khoán... (Ví dụ: Giá HPG hôm nay?)"
-                    rows="1"
-                ></textarea>
-                <button id="sendButton">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+            <!-- Khu vực tin nhắn -->
+            <div id="chat-container" class="chat-area">
+                <!-- Tin nhắn sẽ được JS thêm vào đây -->
             </div>
-            <div class="disclaimer">
-                MAO-ARAG có thể mắc lỗi, vui lòng kiểm tra lại thông tin quan trọng.
+
+            <!-- Input Area -->
+            <div class="input-container">
+                <div class="input-box-wrapper">
+                    <div id="file-preview" class="file-preview"></div>
+                    
+                    <div class="input-row">
+                        <button id="upload-btn" class="action-btn" title="Đính kèm tệp">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+                        
+                        <textarea id="user-input" placeholder="Nhắn tin cho MAO-ARAG..." rows="1"></textarea>
+                        
+                        <button id="send-btn" class="action-btn send-btn" disabled>
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="disclaimer">
+                    MAO-ARAG có thể mắc lỗi. Hãy kiểm tra lại các thông tin quan trọng.
+                </div>
             </div>
-        </main>
+        </div>
     </div>
 
-    <!-- JavaScript -->
-    <script src="script.js"></script>
+    <!-- Modal Đăng ký -->
+    <div id="sub-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Đăng ký nhận bản tin</h3>
+                <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="sub-email" placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Mã cổ phiếu</label>
+                    <input type="text" id="sub-ticker" placeholder="VD: FPT">
+                </div>
+                <button id="confirm-sub" class="primary-btn">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/frontend/script.js"></script>
+    <script>
+        function setInput(text) {
+            const input = document.getElementById('user-input');
+            input.value = text;
+            input.focus();
+            input.dispatchEvent(new Event('input'));
+        }
+    </script>
 </body>
 </html>

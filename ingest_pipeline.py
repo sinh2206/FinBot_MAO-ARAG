@@ -130,8 +130,9 @@ class IngestPipeline:
         # Bước 3: Lưu vào VectorDB
         metadata = {
             "filename": filename,
-            "ticker": ticker if ticker else "unknown",
-            "source": str(file_path)
+            "ticker": ticker,
+            "source": str(file_path),
+            "is_simulated": "simulated" in filename.lower()
         }
         success = self.vector_db.add_documents(chunks, metadata)
         if not success:

@@ -15,7 +15,7 @@ class SQLiteManager:
     Quản lý kết nối và thao tác với database SQLite lưu thông tin file đã ingest.
     """
 
-    def __init__(self, db_path: str = "storage/finai.db"):
+    def __init__(self, db_path: str = "storage/MAO.db"):
         """
         Khởi tạo kết nối database và tạo bảng nếu chưa tồn tại.
 
@@ -100,7 +100,7 @@ class ChatHistoryDB:
     Quản lý lịch sử chat của người dùng.
     """
 
-    def __init__(self, db_path: str = "storage/finai.db"):
+    def __init__(self, db_path: str = "storage/MAO.db"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_table()

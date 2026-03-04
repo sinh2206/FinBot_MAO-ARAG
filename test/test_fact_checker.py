@@ -68,16 +68,20 @@ async def test_fact_checker_empty_context():
     """
     Test khi context rỗng, toàn bộ draft phải bị loại bỏ hoặc thay bằng cảnh báo.
     """
-    agent = FactCheckerAgent()
     draft = "Công ty A có lợi nhuận 100 tỷ."
 
     expected = "*[Cảnh báo: Không có đủ dữ liệu gốc để xác minh thông tin này]*"
 
     # Mock LLM response
-    with patch.object(agent.llm, 'ainvoke', new_callable=AsyncMock) as mock_ainvoke:
+    with patch('app.executors.fact_checker.ChatGoogleGenerativeAI'):
+        agent = FactCheckerAgent()
         mock_response = MagicMock()
         mock_response.content = expected
-        mock_ainvoke.return_value = mock_response
+
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke = AsyncMock(return_value=mock_response)
+        agent.prompt = MagicMock()
+        agent.prompt.__or__ = MagicMock(return_value=mock_chain)
 
         result = await agent.verify_and_cite(draft, [])
         assert "Cảnh báo" in result

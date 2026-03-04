@@ -1,263 +1,306 @@
-/**
- * script.js - Xử lý toàn bộ logic chat frontend
- * Bao gồm: gửi tin nhắn, hiệu ứng loading, gọi API, render Markdown + biểu đồ.
- */
+// ===== DOM ELEMENTS =====
+const welcomeScreen = document.getElementById('welcome-screen');
+const chatContainer = document.getElementById('chat-container');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const historyList = document.getElementById('chat-history-list');
+const modal = document.getElementById('sub-modal');
+const openModalBtn = document.getElementById('open-sub-modal');
+const closeModalBtn = document.querySelector('.close-modal');
+const confirmSubBtn = document.getElementById('confirm-sub');
+const uploadBtn = document.getElementById('upload-btn'); // chÆ°a dÃ¹ng
 
-// DOM elements
-const messagesContainer = document.getElementById('messagesContainer');
-const queryInput = document.getElementById('queryInput');
-const sendButton = document.getElementById('sendButton');
+// ===== STATE =====
+let isWaiting = false; // Ä‘ang chá» pháº£n há»“i tá»« server
+let currentMessages = []; // lÆ°u táº¡m tin nháº¯n hiá»‡n táº¡i (cÃ³ thá»ƒ dÃ¹ng Ä‘á»ƒ restore history)
+let sessionId = Date.now().toString(); // táº¡m thá»i dÃ¹ng timestamp
+const userId = 'anonymous';
 
-// Biến trạng thái
-let isLoading = false;          // Đang gửi tin nhắn?
-let currentMessageId = null;    // ID của tin nhắn tạm (loading)
-let loadingInterval = null;     // Interval để thay đổi trạng thái loading
-const loadingSteps = [
-    "⏳ Đang phân tích câu hỏi...",
-    "📊 Đang lấy dữ liệu giá từ VnStock...",
-    "📑 Đang đọc báo cáo tài chính Q3...",
-    "📈 Đang vẽ biểu đồ...",
-    "🤔 Đang tổng hợp thông tin...",
-    "✍️ Đang viết báo cáo..."
-];
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+    // Load lá»‹ch sá»­ chat (náº¿u cÃ³)
+    loadHistory();
 
-/**
- * Tự động điều chỉnh chiều cao của textarea
- */
-queryInput.addEventListener('input', function() {
+    // Focus vÃ o input
+    userInput.focus();
+
+    // Auto-resize textarea
+    userInput.addEventListener('input', autoResize);
+
+    // Gá»­i khi nháº¥n Enter (khÃ´ng Shift)
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Xá»­ lÃ½ nÃºt gá»­i
+    sendBtn.addEventListener('click', sendMessage);
+
+    // NÃºt new chat
+    newChatBtn.addEventListener('click', resetChat);
+
+    // Modal
+    openModalBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+
+    confirmSubBtn.addEventListener('click', () => {
+        // Giáº£ láº­p Ä‘Äƒng kÃ½, cÃ³ thá»ƒ thÃ´ng bÃ¡o
+        alert('Cáº£m Æ¡n báº¡n Ä‘Ã£ Ä‘Äƒng kÃ½!');
+        modal.classList.add('hidden');
+    });
+
+    // Xá»­ lÃ½ nÃºt upload (táº¡m thá»i khÃ´ng lÃ m)
+    uploadBtn.addEventListener('click', () => {
+        alert('Chá»©c nÄƒng Ä‘Ã­nh kÃ¨m Ä‘ang phÃ¡t triá»ƒn.');
+    });
+});
+
+// ===== AUTO RESIZE TEXTAREA =====
+function autoResize() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
-});
-
-/**
- * Gửi tin nhắn khi nhấn Enter (không Shift)
- */
-queryInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+    // Giá»›i háº¡n tá»‘i Ä‘a 200px (Ä‘Ã£ cÃ³ trong CSS)
+    if (this.scrollHeight > 200) {
+        this.style.height = '200px';
+        this.style.overflowY = 'auto';
+    } else {
+        this.style.overflowY = 'hidden';
     }
-});
 
-/**
- * Gửi tin nhắn khi click nút gửi
- */
-sendButton.addEventListener('click', sendMessage);
+    // Enable/disable send button dá»±a trÃªn ná»™i dung
+    if (this.value.trim() === '') {
+        sendBtn.disabled = true;
+    } else {
+        sendBtn.disabled = false;
+    }
+}
 
-/**
- * Hàm gửi tin nhắn chính
- */
+// ===== SEND MESSAGE =====
 async function sendMessage() {
-    const query = queryInput.value.trim();
-    if (!query || isLoading) return;
+    const message = userInput.value.trim();
+    if (!message || isWaiting) return;
 
-    // Hiển thị tin nhắn của user
-    addUserMessage(query);
-    queryInput.value = '';
-    queryInput.style.height = 'auto';
+    // áº¨n welcome screen, hiá»‡n chat container
+    welcomeScreen.classList.add('hidden');
+    chatContainer.classList.remove('hidden');
 
-    // Bắt đầu trạng thái loading
-    startLoading();
+    // ThÃªm tin nháº¯n user vÃ o chat
+    addMessageToChat('user', message);
+
+    // XÃ³a input vÃ  reset chiá»u cao
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    // Hiá»ƒn thá»‹ typing indicator
+    const typingId = showTypingIndicator();
+
+    isWaiting = true;
 
     try {
-        // Gọi API
-        const response = await fetch('/api/chat', {
+        // Gá»i API
+        const response = await fetch('/chat', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query: query, user_id: 'anonymous' })
+            body: JSON.stringify({
+                query: message,
+                user_id: userId,
+                session_id: sessionId
+            })
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error ${response.status}`);
         }
 
         const data = await response.json();
-        // data format: { answer: "...", chart_url: "/charts/...", processing_time: "...", cost: "..." }
-        
-        // Kết thúc loading và hiển thị kết quả
-        finishLoading(data);
+        // data: { answer, cost, workflow, latency, token_usage }
+
+        // XÃ³a typing indicator
+        removeTypingIndicator(typingId);
+
+        // Render response
+        renderBotResponse(data.answer, data.chart_path || null);
+
     } catch (error) {
-        console.error('Lỗi khi gọi API:', error);
-        finishLoadingWithError('Xin lỗi, đã xảy ra lỗi kết nối. Vui lòng thử lại sau.');
+        console.error('Error:', error);
+        removeTypingIndicator(typingId);
+        addMessageToChat('bot', 'âŒ Xin lá»—i, Ä‘Ã£ xáº£y ra lá»—i. Vui lÃ²ng thá»­ láº¡i sau.');
+    } finally {
+        isWaiting = false;
     }
 }
 
-/**
- * Thêm tin nhắn của user vào container
- */
-function addUserMessage(text) {
+// ===== RENDER BOT RESPONSE =====
+function renderBotResponse(markdownText, chartPath) {
+    // Parse markdown thÃ nh HTML
+    const htmlContent = marked.parse(markdownText);
+
+    // Táº¡o container cho bot message
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'message user';
+    messageDiv.className = 'message-container bot';
 
-    messageDiv.innerHTML = `
-        <div class="avatar"><i class="fas fa-user"></i></div>
-        <div class="message-content">
-            <p>${escapeHtml(text)}</p>
-        </div>
-    `;
+    // Avatar
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'message-avatar';
+    avatarDiv.innerHTML = '<i class="fa-solid fa-robot"></i>';
+    messageDiv.appendChild(avatarDiv);
 
-    messagesContainer.appendChild(messageDiv);
+    // Content
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.innerHTML = htmlContent;
+    messageDiv.appendChild(contentDiv);
+
+    // Náº¿u cÃ³ chartPath, thÃªm áº£nh
+    if (chartPath) {
+        const img = document.createElement('img');
+        img.src = chartPath;
+        img.alt = 'Biá»ƒu Ä‘á»“';
+        img.style.maxWidth = '100%';
+        contentDiv.appendChild(img);
+    }
+
+    chatContainer.appendChild(messageDiv);
     scrollToBottom();
+
+    // LÆ°u vÃ o currentMessages (cÃ³ thá»ƒ dÃ¹ng Ä‘á»ƒ sau nÃ y)
+    currentMessages.push({ role: 'bot', content: markdownText });
 }
 
-/**
- * Thêm tin nhắn của assistant (AI)
- */
-function addAssistantMessage(markdownContent, chartUrl = null, processingTime = '', cost = '') {
+// ===== ADD USER MESSAGE =====
+function addMessageToChat(role, text) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'message assistant';
+    messageDiv.className = `message-container ${role}`;
 
-    // Render markdown
-    const htmlContent = marked.parse(markdownContent);
-
-    let chartHtml = '';
-    if (chartUrl) {
-        chartHtml = `<img src="${chartUrl}" alt="Biểu đồ chứng khoán" loading="lazy">`;
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'message-avatar';
+    if (role === 'user') {
+        avatarDiv.innerHTML = '<i class="fa-regular fa-user"></i>';
+    } else {
+        avatarDiv.innerHTML = '<i class="fa-solid fa-robot"></i>';
     }
+    messageDiv.appendChild(avatarDiv);
 
-    let footerHtml = '';
-    if (processingTime || cost) {
-        footerHtml = `<div class="message-footer">
-            ${processingTime ? `<span>⏱️ ${processingTime}</span>` : ''}
-            ${cost ? `<span>💰 ${cost}</span>` : ''}
-        </div>`;
-    }
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.textContent = text; // user message khÃ´ng markdown
+    messageDiv.appendChild(contentDiv);
 
-    messageDiv.innerHTML = `
-        <div class="avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content">
-            ${htmlContent}
-            ${chartHtml}
-            ${footerHtml}
-        </div>
-    `;
-
-    messagesContainer.appendChild(messageDiv);
-    scrollToBottom();
-}
-
-/**
- * Bắt đầu hiệu ứng loading: tạo tin nhắn tạm và chạy interval thay đổi text
- */
-function startLoading() {
-    isLoading = true;
-    sendButton.disabled = true;
-
-    // Tạo tin nhắn loading
-    const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'message assistant';
-    loadingDiv.id = 'loading-message';
-    loadingDiv.innerHTML = `
-        <div class="avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content">
-            <p class="loading-step"><i class="fas fa-spinner fa-pulse"></i> ${loadingSteps[0]}</p>
-        </div>
-    `;
-    messagesContainer.appendChild(loadingDiv);
+    chatContainer.appendChild(messageDiv);
     scrollToBottom();
 
-    let stepIndex = 0;
-    loadingInterval = setInterval(() => {
-        stepIndex = (stepIndex + 1) % loadingSteps.length;
-        const stepElement = document.querySelector('#loading-message .loading-step');
-        if (stepElement) {
-            stepElement.innerHTML = `<i class="fas fa-spinner fa-pulse"></i> ${loadingSteps[stepIndex]}`;
-        }
-    }, 2000); // Đổi mỗi 2 giây
+    // LÆ°u vÃ o currentMessages
+    currentMessages.push({ role, content: text });
 }
 
-/**
- * Kết thúc loading thành công, xóa tin nhắn tạm và hiển thị kết quả
- */
-function finishLoading(data) {
-    // Dọn dẹp interval và xóa tin nhắn loading
-    clearInterval(loadingInterval);
-    const loadingMsg = document.getElementById('loading-message');
-    if (loadingMsg) loadingMsg.remove();
+// ===== TYPING INDICATOR =====
+function showTypingIndicator() {
+    const id = 'typing-' + Date.now();
+    const typingDiv = document.createElement('div');
+    typingDiv.id = id;
+    typingDiv.className = 'message-container bot';
 
-    // Thêm tin nhắn assistant với dữ liệu từ API
-    addAssistantMessage(
-        data.answer,
-        data.chart_url,
-        data.processing_time,
-        data.cost
-    );
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'message-avatar';
+    avatarDiv.innerHTML = '<i class="fa-solid fa-robot"></i>';
+    typingDiv.appendChild(avatarDiv);
 
-    isLoading = false;
-    sendButton.disabled = false;
-}
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    typingDiv.appendChild(contentDiv);
 
-/**
- * Kết thúc loading với lỗi
- */
-function finishLoadingWithError(errorMessage) {
-    clearInterval(loadingInterval);
-    const loadingMsg = document.getElementById('loading-message');
-    if (loadingMsg) loadingMsg.remove();
-
-    // Thêm tin nhắn lỗi
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'message assistant';
-    errorDiv.innerHTML = `
-        <div class="avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content" style="color: #ff6b6b;">
-            <p><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(errorMessage)}</p>
-        </div>
-    `;
-    messagesContainer.appendChild(errorDiv);
+    chatContainer.appendChild(typingDiv);
     scrollToBottom();
-
-    isLoading = false;
-    sendButton.disabled = false;
+    return id;
 }
 
-/**
- * Helper: cuộn xuống cuối cùng
- */
+function removeTypingIndicator(id) {
+    const typing = document.getElementById(id);
+    if (typing) typing.remove();
+}
+
+// ===== SCROLL TO BOTTOM =====
 function scrollToBottom() {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-/**
- * Helper: escape HTML để tránh XSS (cho user message)
- */
-function escapeHtml(unsafe) {
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+// ===== RESET CHAT (New Chat) =====
+function resetChat() {
+    // XÃ³a toÃ n bá»™ tin nháº¯n trong chat container
+    chatContainer.innerHTML = '';
+    // Hiá»‡n láº¡i welcome screen
+    welcomeScreen.classList.remove('hidden');
+    chatContainer.classList.add('hidden');
+    // Clear current messages
+    currentMessages = [];
+    // Focus input
+    userInput.focus();
 }
 
-// Load lịch sử chat (có thể gọi API /api/history/{user_id} để lấy)
+// ===== LOAD HISTORY =====
 async function loadHistory() {
     try {
-        const response = await fetch('/api/history/anonymous?limit=20');
-        if (response.ok) {
-            const data = await response.json();
-            const historyList = document.getElementById('historyList');
-            // Xóa các item cũ (giữ lại header)
+        const response = await fetch(`/history/${encodeURIComponent(userId)}`);
+        if (!response.ok) throw new Error('Failed to load history');
+        const data = await response.json();
+        // Render vÃ o historyList
+        const items = Array.isArray(data?.history) ? data.history : [];
+        if (items.length > 0) {
             historyList.innerHTML = '';
-            data.history.forEach(item => {
+            items.forEach(item => {
                 const historyItem = document.createElement('div');
                 historyItem.className = 'history-item';
-                historyItem.innerHTML = `<i class="fas fa-message"></i><span>${escapeHtml(item.query.substring(0, 30))}...</span>`;
-                historyItem.addEventListener('click', () => {
-                    // Có thể set lại câu hỏi vào input hoặc tự động gửi
-                    queryInput.value = item.query;
-                });
+                historyItem.dataset.id = item.id;
+                historyItem.innerHTML = `
+                    <i class="fa-regular fa-message"></i>
+                    <span>${item.query || 'Cuá»™c trÃ² chuyá»‡n'}</span>
+                `;
+                historyItem.addEventListener('click', () => loadConversation(item.id));
                 historyList.appendChild(historyItem);
             });
+        } else {
+            // Hiá»ƒn thá»‹ placeholder
+            historyList.innerHTML = '<div class="history-item" style="justify-content:center;">ChÆ°a cÃ³ lá»‹ch sá»­</div>';
         }
-    } catch (e) {
-        console.warn('Không thể load lịch sử:', e);
+    } catch (error) {
+        console.warn('Could not load history:', error);
+        // Fallback: hiá»ƒn thá»‹ máº«u
+        historyList.innerHTML = `
+            <div class="history-item"><i class="fa-regular fa-message"></i> <span>PhÃ¢n tÃ­ch FPT</span></div>
+            <div class="history-item"><i class="fa-regular fa-message"></i> <span>So sÃ¡nh HPG vÃ  HSG</span></div>
+        `;
     }
 }
 
-// Gọi load lịch sử khi trang được tải
-window.addEventListener('load', () => {
-    loadHistory();
-});
+// ===== LOAD CONVERSATION (khi click vÃ o history) =====
+function loadConversation(convId) {
+    // á»ž Ä‘Ã¢y cÃ³ thá»ƒ gá»i API láº¥y chi tiáº¿t cuá»™c trÃ² chuyá»‡n vÃ  render láº¡i
+    // NhÆ°ng Ä‘á»ƒ Ä‘Æ¡n giáº£n, ta chá»‰ thÃ´ng bÃ¡o
+    alert(`TÃ­nh nÄƒng Ä‘ang phÃ¡t triá»ƒn. Conversation ID: ${convId}`);
+}
+
+// ===== SET INPUT Tá»ª SUGGESTION CARD =====
+// HÃ m setInput Ä‘Ã£ Ä‘Æ°á»£c Ä‘á»‹nh nghÄ©a trong HTML global, nhÆ°ng ta cÃ³ thá»ƒ override náº¿u cáº§n
+window.setInput = function(text) {
+    userInput.value = text;
+    userInput.focus();
+    userInput.dispatchEvent(new Event('input'));
+};

@@ -43,12 +43,11 @@ Hãy viết câu trả lời hoàn chỉnh.
         ])
 
     @track_latency
-    async def generate_report(self, query: str, context: Dict[str, Any]) -> str:
+    async def generate_report(self, context: Dict[str, Any]) -> str:
         """
         Tạo báo cáo Markdown.
 
         Args:
-            query: Câu hỏi gốc.
             context: Toàn bộ kết quả từ các executor (đã lưu trong execution context).
 
         Returns:
