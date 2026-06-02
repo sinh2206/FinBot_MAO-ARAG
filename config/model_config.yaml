@@ -1,0 +1,25 @@
+models:
+  planner:
+    repo_id: "Qwen/Qwen2.5-7B-Instruct"
+    local_dir: "models/qwen"
+    quantize: "4bit"
+    device_map: "auto"
+    local_files_only: true
+
+  executor:
+    repo_id: "MiniMaxAI/MiniMax-M2.1"
+    local_dir: "models/minimax"
+    quantize: "4bit"
+    device_map: "auto"
+    local_files_only: true
+
+  embedder:
+    repo_id: "sentence-transformers/all-MiniLM-L6-v2"
+    local_dir: "models/embedder"
+    dimension: 384
+    local_files_only: true
+
+  cross_encoder:
+    repo_id: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    local_dir: "models/cross_encoder"
+    local_files_only: true

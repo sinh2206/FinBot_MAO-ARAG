@@ -1,0 +1,26 @@
+retrieval:
+  mode: "hybrid"
+  top_k: 10
+  executor_top_k: 5
+  dense_top_k: 50
+  sparse_top_k: 50
+  dense_weight: 0.7
+  sparse_weight: 0.3
+
+chunking:
+  chunk_size: 384
+  chunk_overlap_ratio: 0.2
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "? "
+    - "! "
+    - " "
+
+paths:
+  documents_dir: "data/documents"
+  chunks_dir: "data/chunks"
+  index_dir: "data/index"
+  embeddings_dir: "data/embeddings"
+  metadata_dir: "data/metadata"

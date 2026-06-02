@@ -1,23 +1,24 @@
-fastapi
-numpy
-uvicorn
-python-dotenv
-pydantic
-langchain
-langchain-core
-langchain-chroma
-langchain-community
-langchain-text-splitters
-langchain-google-genai
-chromadb
-pdfplumber
-aiohttp
-matplotlib
-pandas
-pytest
-pytest-asyncio
-python-multipart
-google-generativeai
-python-dotenv
-vnstock==3.4.2
-pytz
+streamlit>=1.35.0
+python-dotenv>=1.0.1
+numpy>=1.26.0
+markdown>=3.6
+PyPDF2>=3.0.1
+python-docx>=1.1.2
+langchain-text-splitters>=0.2.0
+huggingface-hub>=0.24.0
+pyyaml>=6.0.1
+
+# Local RAG stack
+faiss-cpu>=1.8.0
+sentence-transformers>=3.0.0
+transformers>=4.43.0
+accelerate>=0.33.0
+torch>=2.3.0
+bitsandbytes>=0.43.1
+
+# Optional RL/fine-tuning stack for scripts/train_qwen_ppo.py
+trl>=0.11.0
+peft>=0.12.0
+
+# Tests
+pytest>=8.2.0
