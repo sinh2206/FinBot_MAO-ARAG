@@ -31,17 +31,7 @@ data/training/*
 !data/training/.gitkeep
 
 storage_rag/cafef_news/
-cafef_news-20260211T204544Z-1-001/
 
-models/qwen/*
-models/minimax/*
-models/embedder/*
-models/cross_encoder/*
-models/qwen_ppo/*
-!models/qwen/.gitkeep
-!models/minimax/.gitkeep
-!models/embedder/.gitkeep
-!models/cross_encoder/.gitkeep
 
 *.log
 *.tmp

@@ -1,0 +1,63 @@
+{
+  "n_rows": 195,
+  "evaluations": [
+    {
+      "alpha": "alpha_1_Momentum_Sentiment_Confirmation",
+      "IC": null,
+      "IC_pval": null,
+      "mean_return_if_alpha_pos": null,
+      "mean_return_if_alpha_neg": null,
+      "win_rate_pos_next_day": null,
+      "win_rate_neg_next_day": null,
+      "n_pos": 0,
+      "n_neg": 0
+    },
+    {
+      "alpha": "alpha_2_Mean_Reversion_Amplified",
+      "IC": null,
+      "IC_pval": null,
+      "mean_return_if_alpha_pos": null,
+      "mean_return_if_alpha_neg": null,
+      "win_rate_pos_next_day": null,
+      "win_rate_neg_next_day": null,
+      "n_pos": 0,
+      "n_neg": 0
+    },
+    {
+      "alpha": "alpha_3_Trend_vs_Market_Fear_Divergence",
+      "IC": null,
+      "IC_pval": null,
+      "mean_return_if_alpha_pos": null,
+      "mean_return_if_alpha_neg": null,
+      "win_rate_pos_next_day": null,
+      "win_rate_neg_next_day": null,
+      "n_pos": 0,
+      "n_neg": 0
+    },
+    {
+      "alpha": "alpha_4_MACD_Crossover_Economic_Confirmation",
+      "IC": null,
+      "IC_pval": null,
+      "mean_return_if_alpha_pos": null,
+      "mean_return_if_alpha_neg": null,
+      "win_rate_pos_next_day": null,
+      "win_rate_neg_next_day": null,
+      "n_pos": 0,
+      "n_neg": 0
+    },
+    {
+      "alpha": "alpha_5_Volatility_Sentiment_Spike",
+      "IC": null,
+      "IC_pval": null,
+      "mean_return_if_alpha_pos": null,
+      "mean_return_if_alpha_neg": null,
+      "win_rate_pos_next_day": null,
+      "win_rate_neg_next_day": null,
+      "n_pos": 0,
+      "n_neg": 0
+    }
+  ],
+  "IC_mean_across_alphas": null,
+  "IC_std_across_alphas": null,
+  "ICIR_across_alphas": null
+}
