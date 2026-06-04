@@ -1,157 +1,383 @@
-# tools/ocr_tool.py
+from __future__ import annotations
 
-import os
-import sys
+import argparse
+import csv
 import json
+import re
+import subprocess
+import sys
+from io import BytesIO
 from pathlib import Path
-from typing import Any, Type, List, Dict
-from pydantic import BaseModel, Field
+from typing import Iterable
 
-from crewai.tools import BaseTool
-from mistralai import Mistral
 
-def serialize(obj: Any) -> Any:
-    import dataclasses
-    if obj is None or isinstance(obj, (str, bool, int, float)): return obj
-    if isinstance(obj, dict): return {str(k): serialize(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple, set)): return [serialize(i) for i in obj]
-    if hasattr(obj, "to_dict") and callable(getattr(obj, "to_dict")):
-        try: return serialize(obj.to_dict())
-        except Exception: pass
-    if hasattr(obj, "dict") and callable(getattr(obj, "dict")):
-        try: return serialize(obj.dict())
-        except Exception: pass
-    if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
-        try: return serialize(obj.model_dump())
-        except Exception: pass
-    if hasattr(obj, "json") and callable(getattr(obj, "json")):
-        try:
-            j = obj.json()
-            return json.loads(j) if isinstance(j, str) else serialize(j)
-        except Exception: pass
-    try:
-        if dataclasses.is_dataclass(obj): return serialize(dataclasses.asdict(obj))
-    except Exception: pass
-    if hasattr(obj, "__dict__"):
-        try: return serialize(vars(obj))
-        except Exception: pass
-    if hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, bytearray)):
-        try: return [serialize(i) for i in obj]
-        except Exception: pass
-    return str(obj)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-class OCRToolInput(BaseModel):
-    pdf_path: str = Field(..., description="Đường dẫn đầy đủ và chính xác đến file PDF cần trích xuất văn bản.")
 
-class MistralOCRTool(BaseTool):
-    name: str = "Công cụ trích xuất văn bản từ file PDF hoặc file Scan"
-    description: str = (
-        "Hữu ích khi cần đọc và trích xuất toàn bộ nội dung văn bản từ một file PDF. "
-        "Đầu vào là đường dẫn đến file PDF. "
-        "Đầu ra là một chuỗi thông báo thành công và đường dẫn đến file .txt chứa nội dung đã được trích xuất."
+DEFAULT_RAW_DIR = PROJECT_ROOT / "data" / "raw_data"
+DEFAULT_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed_data"
+DEFAULT_METADATA_DIR = PROJECT_ROOT / "data" / "metadata"
+
+SUPPORTED_EXTENSIONS = {
+    ".csv",
+    ".doc",
+    ".docx",
+    ".htm",
+    ".html",
+    ".md",
+    ".markdown",
+    ".pdf",
+    ".txt",
+}
+
+OCR_PHRASE_CORRECTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bS[06o]\s+Giao\s+dich\b", flags=re.IGNORECASE), "Sở Giao dịch"),
+    (re.compile(r"\bSo\s+Giao\s+dich\b", flags=re.IGNORECASE), "Sở Giao dịch"),
+    (re.compile(r"\bS&\s+Giao\s+dịch\b", flags=re.IGNORECASE), "Sở Giao dịch"),
+    (re.compile(r"\bGiao\s+dich\b", flags=re.IGNORECASE), "Giao dịch"),
+    (
+        re.compile(
+            r"\bCh(?:ứng|ung|ing|img|tmg|irng|i?rng|ủng)\s+"
+            r"kh(?:oan|oán|oàn|oản|oãn|oạn|oén|oen|ocin|odn|o[aáàảãạăâeéèẻẽẹd]n)\b",
+            flags=re.IGNORECASE,
+        ),
+        "Chứng khoán",
+    ),
+    (re.compile(r"\bCHUNG\s+KHOAN\b", flags=re.IGNORECASE), "Chứng khoán"),
+    (re.compile(r"\bChứng\s+kh(?:oan|oán|oàn|o[aáàảãạăâeéèẻẽẹd]n)\b", flags=re.IGNORECASE), "Chứng khoán"),
+    (re.compile(r"\bThanh\s+ph(?:e|é|o|ó|d|đ)\b", flags=re.IGNORECASE), "Thành phố"),
+    (re.compile(r"\bThành\s+ph(?:o|ó|d|đ|e|é)\b", flags=re.IGNORECASE), "Thành phố"),
+    (re.compile(r"\bTP\.\s*H[eéèẻẽẹo]\s+Chi\s+Minh\b", flags=re.IGNORECASE), "TP. Hồ Chí Minh"),
+    (re.compile(r"\bTP\s+H[O0]\s+CH[IÍÌỈĨỊ]\s+MINH\b", flags=re.IGNORECASE), "TP. Hồ Chí Minh"),
+    (re.compile(r"\bThanh\s+ph6\s+H[O0]\s+Chi\s+Minh\b", flags=re.IGNORECASE), "Thành phố Hồ Chí Minh"),
+    (
+        re.compile(
+            r"\bThành phố\s+H(?:o|6|e|é|è|ẻ|ẽ|ẹ|ồ|ố|ổ|ỗ|ộ|ò|ó|ỏ|õ|ọ)\s+Chi\s+Minh\b",
+            flags=re.IGNORECASE,
+        ),
+        "Thành phố Hồ Chí Minh",
+    ),
+    (
+        re.compile(
+            r"\bThanh phố\s+H(?:o|6|e|é|è|ẻ|ẽ|ẹ|ồ|ố|ổ|ỗ|ộ|ò|ó|ỏ|õ|ọ)\s+Chi\s+Minh\b",
+            flags=re.IGNORECASE,
+        ),
+        "Thành phố Hồ Chí Minh",
+    ),
+    (re.compile(r"\bThanh pho\s+H(?:o|6|e|é|è|ẻ|ẽ|ẹ)\s+Chi\s+Minh\b", flags=re.IGNORECASE), "Thành phố Hồ Chí Minh"),
+    (re.compile(r"\bHOCHIMINH\s+STOCK\s+EXCHANGE\b", flags=re.IGNORECASE), "Ho Chi Minh Stock Exchange"),
+    (re.compile(r"\bUy\s+ban\s+Chứng\s+khoán\s+Nhà\s+nước\b", flags=re.IGNORECASE), "Ủy ban Chứng khoán Nhà nước"),
+    (re.compile(r"\bOy\s+ban\s+Chứng\s+khoán\b", flags=re.IGNORECASE), "Ủy ban Chứng khoán"),
+    (re.compile(r"\bUY\s+BAN\s+Chứng\s+khoán\s+NHA\s+NUOC\b", flags=re.IGNORECASE), "Ủy ban Chứng khoán Nhà nước"),
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Convert raw PDF/DOC/DOCX/CSV/TXT documents from data/raw_data into "
+            "normalized UTF-8 TXT files in data/processed_data."
+        )
     )
-    args_schema: Type[BaseModel] = OCRToolInput
+    parser.add_argument(
+        "--raw_dir",
+        "--input_dir",
+        dest="raw_dir",
+        default=str(DEFAULT_RAW_DIR),
+        help="Input folder containing original raw files.",
+    )
+    parser.add_argument(
+        "--processed_dir",
+        "--output_dir",
+        dest="processed_dir",
+        default=str(DEFAULT_PROCESSED_DIR),
+        help="Output folder for normalized .txt files.",
+    )
+    parser.add_argument(
+        "--metadata_dir",
+        default=str(DEFAULT_METADATA_DIR),
+        help="Output folder for conversion metadata JSON.",
+    )
+    parser.add_argument(
+        "--recursive",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Scan raw_dir recursively. Use --no-recursive to scan only one level.",
+    )
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing .txt outputs.")
+    parser.add_argument(
+        "--ocr",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help="PDF OCR mode. auto runs OCR only when normal PDF text extraction is too short.",
+    )
+    parser.add_argument("--ocr_lang", default="vie+eng", help="Tesseract languages, for example vie+eng.")
+    parser.add_argument("--ocr_dpi", type=int, default=150, help="PDF render DPI before OCR.")
+    parser.add_argument(
+        "--min_extracted_chars",
+        type=int,
+        default=200,
+        help="Minimum PDF text chars required before OCR is skipped in auto mode.",
+    )
+    return parser.parse_args()
 
-    def _run(self, pdf_path: str) -> str:
+
+def main() -> None:
+    args = parse_args()
+    raw_dir = Path(args.raw_dir)
+    processed_dir = Path(args.processed_dir)
+    metadata_dir = Path(args.metadata_dir)
+
+    if not raw_dir.exists():
+        raise FileNotFoundError(f"Raw data folder does not exist: {raw_dir}")
+
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+
+    files = collect_files(raw_dir, recursive=args.recursive)
+    summary_items: list[dict[str, object]] = []
+    converted = 0
+    skipped = 0
+    failed = 0
+
+    for source in files:
+        relative = source.relative_to(raw_dir)
+        output = (processed_dir / relative).with_suffix(".txt")
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        if output.exists() and not args.overwrite:
+            skipped += 1
+            summary_items.append(make_summary_item(source, output, "skipped", "exists", text_chars=output.stat().st_size))
+            continue
+
         try:
-            pdf_file = Path(pdf_path)
-            if not pdf_file.exists():
-                return f"Lỗi: Không tìm thấy file tại đường dẫn '{pdf_path}'. Vui lòng kiểm tra lại đường dẫn."
-            
-            output_prefix = pdf_file.with_suffix("")
-            txt_path = Path(str(output_prefix) + ".ocr_text.txt")
-
-            # Kiểm tra xem file .txt đã tồn tại chưa
-            if txt_path.exists():
-                print(f"\n[OCR Tool] Đã tìm thấy file OCR có sẵn: '{txt_path}'. Bỏ qua bước OCR.")
-                # Nếu đã có, trả về đường dẫn ngay lập tức
-                return f"Đã sử dụng lại kết quả OCR có sẵn. Nội dung được lưu tại file: '{txt_path}'"
-
-            api_key = os.environ.get("MISTRAL_API_KEY")
-            if not api_key:
-                return "Lỗi: Biến môi trường MISTRAL_API_KEY chưa được thiết lập."
-
-            output_prefix = pdf_file.with_suffix("")
-            client = Mistral(api_key=api_key)
-
-            print(f"\n[OCR Tool] Đang tải lên file: {pdf_file.name}...")
-            with open(pdf_file, "rb") as f:
-                uploaded = client.files.upload(file={"file_name": pdf_file.name, "content": f}, purpose="ocr")
-            file_id = getattr(uploaded, "id", None)
-            if not file_id:
-                return f"Lỗi: Không thể lấy ID của file sau khi tải lên. Phản hồi từ API: {serialize(uploaded)}"
-            
-            print(f"[OCR Tool] Tải lên thành công. File ID: {file_id}")
-            signed = client.files.get_signed_url(file_id=file_id)
-            url = getattr(signed, "url", None)
-            if not url:
-                return f"Lỗi: Không thể lấy URL đã ký cho file ID: {file_id}"
-
-            print("[OCR Tool] Đang gọi API của Mistral OCR...")
-            ocr_resp = client.ocr.process(
-                model="mistral-ocr-latest",
-                document={"type": "document_url", "document_url": url}
+            text, method = convert_file(
+                source,
+                ocr_mode=args.ocr,
+                ocr_lang=args.ocr_lang,
+                ocr_dpi=args.ocr_dpi,
+                min_extracted_chars=args.min_extracted_chars,
             )
+            text = clean_text(text)
+            if not text:
+                raise RuntimeError("Converted text is empty")
 
-            raw_response = serialize(ocr_resp)
+            output.write_text(text + "\n", encoding="utf-8")
+            converted += 1
+            summary_items.append(make_summary_item(source, output, "converted", method, text_chars=len(text)))
+        except Exception as exc:  # noqa: BLE001 - batch conversion should continue.
+            failed += 1
+            summary_items.append(make_summary_item(source, output, "failed", source.suffix.lower(), error=str(exc)))
 
-            print("[OCR Tool] Đang xử lý phản hồi từ API...")
-            
-            print("[OCR Tool] Snippet phản hồi thô từ API:")
-            print(json.dumps(raw_response, indent=2, ensure_ascii=False)[:1000]) # In 1000 ký tự đầu
+    summary = {
+        "raw_dir": str(raw_dir),
+        "processed_dir": str(processed_dir),
+        "total_files": len(files),
+        "converted": converted,
+        "skipped": skipped,
+        "failed": failed,
+        "ocr_mode": args.ocr,
+        "ocr_lang": args.ocr_lang,
+        "ocr_dpi": args.ocr_dpi,
+        "min_extracted_chars": args.min_extracted_chars,
+        "files": summary_items,
+    }
+    summary_path = metadata_dir / "raw_data_conversion_summary.json"
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-            pages_data = []
-            if isinstance(raw_response, dict):
-                possible_page_keys = ["pages", "page", "pages_data"]
-                for key in possible_page_keys:
-                    if key in raw_response and isinstance(raw_response[key], list):
-                        pages_data = raw_response[key]
-                        break
-            elif isinstance(raw_response, list):
-                pages_data = raw_response
+    print(f"Total files: {len(files)}")
+    print(f"Converted: {converted}, skipped: {skipped}, failed: {failed}")
+    print(f"Processed TXT folder: {processed_dir}")
+    print(f"Summary: {summary_path}")
+    if failed:
+        raise SystemExit(1)
 
-            extracted_pages: List[Dict] = []
-            if pages_data:
-                for i, p_data in enumerate(pages_data, start=1):
-                    text = ""
-                    page_number = i
-                    if isinstance(p_data, dict):
-                        possible_text_keys = ["text", "plain_text", "markdown", "content"]
-                        for key in possible_text_keys:
-                            if key in p_data and p_data[key]:
-                                text = p_data[key]
-                                break
-                        possible_page_num_keys = ["page_number", "page", "index"]
-                        for key in possible_page_num_keys:
-                            if key in p_data:
-                                page_number = p_data[key]
-                                break
-                    elif isinstance(p_data, str):
-                        text = p_data
-                    
-                    extracted_pages.append({"page_number": page_number, "text": text})
-            
-            if not extracted_pages and isinstance(raw_response, dict):
-                top_level_text = raw_response.get("text")
-                if top_level_text:
-                    extracted_pages.append({"page_number": 1, "text": top_level_text})
 
-            if not extracted_pages:
-                return f"Lỗi: Không thể trích xuất được nội dung văn bản từ phản hồi của API. Vui lòng kiểm tra snippet log ở trên."
+def collect_files(raw_dir: Path, *, recursive: bool = True) -> list[Path]:
+    pattern = "**/*" if recursive else "*"
+    return [
+        path
+        for path in sorted(raw_dir.glob(pattern))
+        if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+    ]
 
-            all_text = "\n\n".join(
-                [f"--- TRANG {p['page_number']} ---\n{p['text']}" for p in extracted_pages]
-            )
 
-            txt_path = Path(str(output_prefix) + ".ocr_text.txt")
-            with open(txt_path, "w", encoding="utf-8") as f:
-                f.write(all_text)
-            
-            print(f"[OCR Tool] Trích xuất thành công!")
-            
-            return f"Trích xuất OCR từ file '{pdf_file.name}' thành công. Toàn bộ nội dung đã được lưu tại file: '{txt_path}'"
+def convert_file(
+    source: Path,
+    *,
+    ocr_mode: str,
+    ocr_lang: str,
+    ocr_dpi: int,
+    min_extracted_chars: int,
+) -> tuple[str, str]:
+    suffix = source.suffix.lower()
+    if suffix == ".pdf":
+        return convert_pdf(source, ocr_mode, ocr_lang, ocr_dpi, min_extracted_chars)
+    if suffix == ".docx":
+        return convert_docx(source), "docx"
+    if suffix == ".doc":
+        return convert_doc(source), "doc"
+    if suffix in {".txt", ".md", ".markdown"}:
+        return source.read_text(encoding="utf-8", errors="ignore"), suffix.lstrip(".")
+    if suffix in {".html", ".htm"}:
+        return convert_html(source), "html"
+    if suffix == ".csv":
+        return convert_csv(source), "csv"
+    raise ValueError(f"Unsupported extension: {suffix}")
 
-        except Exception as e:
-            error_message = f"Đã xảy ra lỗi không mong muốn trong quá trình OCR: {e}"
-            print(f"[OCR Tool] {error_message}", file=sys.stderr)
-            return error_message
+
+def convert_pdf(
+    source: Path,
+    ocr_mode: str,
+    ocr_lang: str,
+    ocr_dpi: int,
+    min_extracted_chars: int,
+) -> tuple[str, str]:
+    extracted = extract_pdf_text(source)
+    extracted_chars = len(extracted.strip())
+    should_ocr = ocr_mode == "always" or (ocr_mode == "auto" and extracted_chars < min_extracted_chars)
+    if not should_ocr:
+        return extracted, "pdf_text"
+
+    ocr_text = ocr_pdf(source, lang=ocr_lang, dpi=ocr_dpi)
+    if ocr_text.strip():
+        method = "pdf_ocr" if not extracted.strip() else "pdf_text_plus_ocr"
+        return "\n\n".join(part for part in [extracted, ocr_text] if part.strip()), method
+    return extracted, "pdf_text"
+
+
+def extract_pdf_text(source: Path) -> str:
+    try:
+        from PyPDF2 import PdfReader
+    except ImportError as exc:
+        raise RuntimeError("PyPDF2 is required for PDF text extraction") from exc
+
+    reader = PdfReader(str(source))
+    pages: list[str] = []
+    for index, page in enumerate(reader.pages, start=1):
+        try:
+            page_text = page.extract_text() or ""
+        except Exception:
+            page_text = ""
+        if page_text.strip():
+            pages.append(f"[page {index}]\n{page_text}")
+    return "\n\n".join(pages)
+
+
+def ocr_pdf(source: Path, *, lang: str, dpi: int) -> str:
+    try:
+        import fitz
+        import pytesseract
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError("OCR requires pymupdf, pytesseract and pillow") from exc
+
+    scale = dpi / 72
+    matrix = fitz.Matrix(scale, scale)
+    pages: list[str] = []
+    with fitz.open(str(source)) as document:
+        for index, page in enumerate(document, start=1):
+            pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+            image = Image.open(BytesIO(pixmap.tobytes("png")))
+            page_text = pytesseract.image_to_string(image, lang=lang)
+            if page_text.strip():
+                pages.append(f"[page {index} OCR]\n{page_text}")
+    return "\n\n".join(pages)
+
+
+def convert_docx(source: Path) -> str:
+    try:
+        from docx import Document
+    except ImportError as exc:
+        raise RuntimeError("python-docx is required for DOCX conversion") from exc
+
+    document = Document(str(source))
+    paragraphs = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
+    table_rows: list[str] = []
+    for table in document.tables:
+        for row in table.rows:
+            values = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+            if values:
+                table_rows.append(" | ".join(values))
+    return "\n\n".join(paragraphs + table_rows)
+
+
+def convert_doc(source: Path) -> str:
+    try:
+        completed = subprocess.run(["antiword", str(source)], check=True, capture_output=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("antiword is required for legacy .doc conversion") from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode("utf-8", errors="ignore").strip()
+        raise RuntimeError(f"antiword failed: {stderr}") from exc
+    return completed.stdout.decode("utf-8", errors="ignore")
+
+
+def convert_html(source: Path) -> str:
+    from html.parser import HTMLParser
+
+    class HTMLTextExtractor(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.parts: list[str] = []
+
+        def handle_data(self, data: str) -> None:
+            if data.strip():
+                self.parts.append(data.strip())
+
+    parser = HTMLTextExtractor()
+    parser.feed(source.read_text(encoding="utf-8", errors="ignore"))
+    return "\n".join(parser.parts)
+
+
+def convert_csv(source: Path) -> str:
+    lines: list[str] = []
+    with source.open("r", encoding="utf-8-sig", errors="ignore", newline="") as handle:
+        reader = csv.reader(handle)
+        for row in reader:
+            values = [cell.strip() for cell in row if cell.strip()]
+            if values:
+                lines.append(" | ".join(values))
+    return "\n".join(lines)
+
+
+def clean_text(text: str) -> str:
+    text = text.replace("\x00", " ")
+    text = normalize_vietnamese_ocr_text(text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def normalize_vietnamese_ocr_text(text: str) -> str:
+    normalized = text
+    for pattern, replacement in OCR_PHRASE_CORRECTIONS:
+        normalized = pattern.sub(replacement, normalized)
+    return normalized
+
+
+def make_summary_item(
+    source: Path,
+    output: Path,
+    status: str,
+    method: str,
+    *,
+    text_chars: int = 0,
+    error: str | None = None,
+) -> dict[str, object]:
+    item: dict[str, object] = {
+        "source": str(source),
+        "output": str(output),
+        "status": status,
+        "method": method,
+        "text_chars": text_chars,
+    }
+    if error:
+        item["error"] = error
+    return item
+
+
+if __name__ == "__main__":
+    main()

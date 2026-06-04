@@ -14,6 +14,24 @@ Pipeline dữ liệu hiện tại có 2 bước chính:
 
 Không nên đưa trực tiếp file PDF/DOC gốc vào fine-tune. Nên convert sang TXT trước, kiểm tra OCR, sau đó mới build index và tạo bộ QA/train data.
 
+Chạy nhanh trong dự án này:
+
+```bash
+python scripts/convert_raw_data.py \
+  --input_dir data/raw_data \
+  --output_dir data/processed_data \
+  --metadata_dir data/metadata \
+  --ocr auto
+
+python scripts/build_index.py \
+  --data_dir data/processed_data \
+  --chunk_dir data/chunks \
+  --index_dir data/index \
+  --embedding_dir data/embeddings \
+  --metadata_dir data/metadata \
+  --local_files_only
+```
+
 
 1. Cài môi trường
 -----------------

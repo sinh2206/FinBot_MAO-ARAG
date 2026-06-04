@@ -1,0 +1,490 @@
+HƯỚNG DẪN TỪNG BƯỚC: FINE-TUNE LFM2-RAG, PPO QWEN VÀ CÁCH CHẤM ĐIỂM
+===================================================================
+
+Mục tiêu của file này
+---------------------
+
+1. Fine-tune executor bằng `models/lfm2_rag/`.
+2. Chạy PPO cho planner bằng `models/qwen/`.
+3. Chấm điểm và đánh giá model theo từng bước.
+
+Nguyên tắc quan trọng:
+
+- `data/raw_data/` đã được OCR và convert sang `data/processed_data/`.
+- Bộ QA trong `data/train/` và `data/test/` đã được chia sẵn.
+- `data/test/` chỉ dùng đánh giá cuối, không dùng để train.
+- `models/lfm2_rag/` là base model, không ghi đè trực tiếp.
+- Adapter sau fine-tune nên lưu riêng vào `models/lfm2_rag_lora/`.
+- PPO của Qwen lưu riêng vào `models/qwen_ppo/`.
+- Fine-tune thật nên chạy trên GPU. Nếu PyTorch không thấy CUDA do driver/PyTorch lệch phiên bản, hãy sửa CUDA trước khi train thật.
+
+
+Bước 0. Kiểm tra dữ liệu đầu vào
+--------------------------------
+
+Trước khi train, kiểm tra lại 4 nhóm dữ liệu:
+
+```bash
+find data/processed_data -maxdepth 1 -type f -name "*.txt" | wc -l
+find data/train -maxdepth 1 -type f | sort
+find data/test -maxdepth 1 -type f | sort
+```
+
+Kỳ vọng:
+
+- `data/processed_data/` có file TXT đã OCR.
+- `data/train/` có `questions.json` và `reference_answers.json`.
+- `data/test/` có `questions.json` và `reference_answers.json`.
+
+
+Bước 1. Chuẩn bị file train/valid/test cho LFM2
+-----------------------------------------------
+
+Mô hình LFM2 là executor nên cần dữ liệu dạng chat/SFT.
+
+Input gốc:
+
+- `data/train/questions.json`
+- `data/train/reference_answers.json`
+
+Output nên tạo:
+
+- `data/training/lfm2_rag_sft.jsonl`
+- `data/training/lfm2_rag_valid.jsonl`
+- `data/training/lfm2_rag_test.jsonl`
+
+Gợi ý chia:
+
+- Lấy `data/train/` làm nguồn train chính.
+- Tách 10% từ `data/train/` ra validation nội bộ.
+- Giữ nguyên `data/test/` cho đánh giá cuối.
+
+Format mỗi dòng nên là chat JSON:
+
+```json
+{
+  "messages": [
+    {"role": "system", "content": "Bạn là executor RAG..."},
+    {"role": "user", "content": "Tài liệu:\n...\n\nCâu hỏi: ..."},
+    {"role": "assistant", "content": "..."}
+  ],
+  "id": "REE_2025_Q3_01",
+  "qa_type": "single_hop",
+  "ticker": "REE",
+  "source_file": "REE-Q3.ocr_text.txt"
+}
+```
+
+Khuyến nghị:
+
+- Câu trả lời phải bám đúng `reference_answers.json`.
+- Nếu muốn tăng độ cứng, thêm một số mẫu `KHÔNG TÌM THẤY` cho câu hỏi không đủ căn cứ.
+- Không dùng vector id, embedding id hay thông tin index làm nhãn train.
+
+
+Bước 2. Tạo file SFT cho LFM2
+-----------------------------
+
+Vì repo hiện chưa có script train LFM2 riêng, bạn dùng mẫu quy trình này để tạo file SFT trước khi train.
+
+Mục tiêu là ghép `questions.json` và `reference_answers.json` theo `id`, rồi chuyển sang chat format.
+
+Nếu bạn đã có script riêng, tên file khuyến nghị là:
+
+```text
+scripts/train_lfm2_sft.py
+```
+
+Tham số khuyến nghị cho script train:
+
+```text
+--model_name_or_path models/lfm2_rag
+--processed_dir data/processed_data
+--train_questions data/train/questions.json
+--train_answers data/train/reference_answers.json
+--eval_questions data/test/questions.json
+--eval_answers data/test/reference_answers.json
+--output_dir models/lfm2_rag_lora
+--learning_rate 2e-4
+--num_train_epochs 3
+--per_device_train_batch_size 1
+--gradient_accumulation_steps 8
+--max_context_chars 3000
+--max_seq_length 2048
+--use_lora true
+--use_4bit true
+```
+
+Nếu bạn chưa có script, đây là logic cần có:
+
+1. Đọc `data/train/questions.json`.
+2. Đọc `data/train/reference_answers.json`.
+3. Ghép theo `id`.
+4. Chuyển thành `messages`.
+5. Ghi ra `data/training/lfm2_rag_sft.jsonl`.
+
+
+Bước 3. Fine-tune LFM2-1.2B-RAG
+-------------------------------
+
+Lệnh kiểm tra CUDA trước khi train:
+
+```bash
+python - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("torch_cuda:", torch.version.cuda)
+print("cuda_available:", torch.cuda.is_available())
+print("device_count:", torch.cuda.device_count())
+PY
+```
+
+Nếu `cuda_available: False`, không chạy train thật với `--use_4bit`. Hãy cập nhật NVIDIA driver hoặc cài PyTorch đúng với driver hiện tại.
+Không truyền `--require_cuda` cho đến khi `cuda_available` chuyển thành `True`.
+
+Lệnh chạy khuyến nghị nếu CUDA đã ổn:
+
+```bash
+python scripts/train_lfm2_sft.py \
+  --model_name_or_path models/lfm2_rag \
+  --processed_dir data/processed_data \
+  --train_questions data/train/questions.json \
+  --train_answers data/train/reference_answers.json \
+  --eval_questions data/test/questions.json \
+  --eval_answers data/test/reference_answers.json \
+  --output_dir models/lfm2_rag_lora \
+  --max_context_chars 3000 \
+  --max_seq_length 2048 \
+  --per_device_train_batch_size 1 \
+  --gradient_accumulation_steps 8 \
+  --use_4bit \
+  --use_lora
+```
+
+Nếu chỉ muốn kiểm tra dữ liệu và cấu hình mà không train:
+
+```bash
+python scripts/train_lfm2_sft.py --dry_run
+```
+
+Nếu vẫn muốn ép train CPU đầy đủ, thêm `--allow_cpu_train`, nhưng cách này rất chậm với LFM2-1.2B.
+
+Nếu train bằng LoRA/QLoRA thì:
+
+- Không ghi đè `models/lfm2_rag/`.
+- Chỉ lưu adapter vào `models/lfm2_rag_lora/`.
+- Khi inference, nạp base model + adapter.
+
+Sau khi train xong, kiểm tra:
+
+```bash
+find models/lfm2_rag_lora -maxdepth 1 -type f | sort
+```
+
+
+Bước 4. Chấm điểm LFM2
+----------------------
+
+Repo hiện có sẵn các hàm chấm điểm trong `tools/evaluation.py`:
+
+- `exact_match(prediction, ground_truth)`
+- `f1_score(prediction, ground_truth)`
+
+Điểm đánh giá cơ bản:
+
+- `EM` = tỷ lệ câu trả lời khớp hoàn toàn sau chuẩn hóa.
+- `F1` = mức độ trùng token giữa dự đoán và đáp án.
+
+Ngưỡng tham khảo:
+
+- `EM >= 0.70` là tốt cho câu hỏi extractive đơn giản.
+- `F1 >= 0.80` là rất ổn nếu dữ liệu sạch.
+
+Đề xuất cách đánh giá từng bước cho LFM2:
+
+1. Đánh giá trên validation nội bộ từ `data/train/`.
+2. Đánh giá lại trên `data/test/`.
+3. So sánh theo `qa_type`:
+   - `single_hop`
+   - `multi_hop`
+4. So sánh theo `ticker`.
+
+Nếu muốn một điểm tổng hợp, có thể dùng:
+
+```text
+score = 0.5 * EM + 0.4 * F1 + 0.1 * groundedness
+```
+
+Trong đó:
+
+- `groundedness` = câu trả lời có bám vào context hay không.
+- Nếu chưa có bộ chấm tự động cho groundedness, thì chấm thủ công một mẫu nhỏ trước.
+
+
+Bước 5. Tạo file đánh giá cho LFM2
+----------------------------------
+
+Để dùng evaluator chung của repo, bạn cần một file có dạng:
+
+```json
+[
+  {"question": "...", "answer": "..."},
+  {"question": "...", "answer": "..."}
+]
+```
+
+Bạn có thể tạo file đánh giá từ `data/test/questions.json` và `data/test/reference_answers.json`.
+
+Mẫu tạo file `data/metadata/qa_eval_test.json`:
+
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
+
+questions = [json.loads(line) for line in Path("data/test/questions.json").read_text(encoding="utf-8").splitlines() if line.strip()]
+answers = {item["id"]: item for item in (json.loads(line) for line in Path("data/test/reference_answers.json").read_text(encoding="utf-8").splitlines() if line.strip())}
+
+rows = []
+for q in questions:
+    a = answers[q["id"]]
+    rows.append({
+        "id": q["id"],
+        "question": q["query"],
+        "answer": a["ground_truth_answer"],
+        "qa_type": q["qa_type"],
+        "ticker": q["ticker"],
+        "source_file": q["source_file"],
+    })
+
+out = Path("data/metadata/qa_eval_test.json")
+out.parent.mkdir(parents=True, exist_ok=True)
+out.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+print(f"wrote {out} with {len(rows)} rows")
+PY
+```
+
+Sau đó chạy:
+
+```bash
+python scripts/evaluate_pipeline.py \
+  --qa_file data/metadata/qa_eval_test.json \
+  --chunks_file data/chunks/chunks.json \
+  --output_file data/metadata/evaluation_lfm2_test.json \
+  --retrieval_mode hybrid
+```
+
+Lưu ý:
+
+- `evaluate_pipeline.py` hiện chấm theo `prediction` so với `answer`.
+- Nếu muốn đánh giá riêng phần LFM2 sau fine-tune, bạn nên chạy inference một vòng để sinh `prediction` trước.
+- Nếu muốn đánh giá end-to-end toàn pipeline, dùng đúng `evaluate_pipeline.py`.
+
+
+Bước 6. Chạy PPO cho Qwen planner
+---------------------------------
+
+Script có sẵn:
+
+```text
+scripts/train_qwen_ppo.py
+```
+
+Dataset mặc định:
+
+```text
+data/training/cafef_planner_workflows.jsonl
+```
+
+Output:
+
+```text
+models/qwen_ppo/
+```
+
+Chạy thử không train:
+
+```bash
+python scripts/train_qwen_ppo.py --dry_run
+```
+
+Chạy PPO thật:
+
+```bash
+python scripts/train_qwen_ppo.py \
+  --model_path models/qwen \
+  --dataset data/training/cafef_planner_workflows.jsonl \
+  --output_dir models/qwen_ppo \
+  --max_steps 100 \
+  --batch_size 2 \
+  --mini_batch_size 1 \
+  --learning_rate 1e-6
+```
+
+Ghi chú:
+
+- `models/qwen/` là base model.
+- PPO cần `trl`, `peft`, `accelerate`, `torch`.
+- Nên chạy trên GPU.
+- Nếu mới thử, để `--max_steps 10` hoặc `--max_steps 20` trước.
+
+
+Bước 7. Cách chấm điểm PPO của Qwen
+-----------------------------------
+
+Trong `scripts/train_qwen_ppo.py`, reward được tính như sau:
+
+```text
+parse JSON fail -> -1.0
+strategy hợp lệ (`sequential` hoặc `parallel`) -> +0.4
+sub_queries là list không rỗng -> +0.4
+có trường `requires_retrieval` -> +0.1
+có trường `requires_execution` -> +0.1
+```
+
+Tức là tổng reward tối đa là `1.0`.
+
+Đánh giá PPO nên nhìn theo các chỉ số:
+
+1. `JSON parse rate`
+2. `Average reward`
+3. `Strategy validity rate`
+4. `Non-empty sub_queries rate`
+5. `Downstream end-to-end EM/F1` sau khi planner sinh workflow mới
+
+Ngưỡng tham khảo:
+
+- JSON parse rate càng gần `100%` càng tốt.
+- Average reward gần `1.0` là rất ổn.
+- Nếu reward trung bình thấp hơn `0.3`, planner vẫn còn lỗi format hoặc chưa học tốt.
+
+
+Bước 8. Đánh giá từng bước sau train
+------------------------------------
+
+Sau khi fine-tune LFM2 và PPO Qwen, đánh giá theo thứ tự:
+
+1. Kiểm tra model file đã sinh ra:
+
+```bash
+find models/lfm2_rag_lora -maxdepth 1 -type f | sort
+find models/qwen_ppo -maxdepth 1 -type f | sort
+```
+
+2. Chạy evaluator end-to-end:
+
+```bash
+python scripts/evaluate_pipeline.py \
+  --qa_file data/metadata/qa_eval_test.json \
+  --chunks_file data/chunks/chunks.json \
+  --output_file data/metadata/evaluation_after_training.json \
+  --retrieval_mode hybrid
+```
+
+3. So sánh với baseline:
+
+- Baseline trước train.
+- Sau fine-tune LFM2.
+- Sau PPO Qwen.
+
+4. So sánh theo từng nhóm:
+
+- `single_hop`
+- `multi_hop`
+- từng `ticker`
+
+5. Chốt model khi:
+
+- `EM` và `F1` tăng rõ rệt so với baseline.
+- Qwen planner sinh JSON hợp lệ ổn định.
+- Kết quả end-to-end không giảm ở các câu hỏi khó.
+
+
+Bước 9. Thứ tự train khuyến nghị
+--------------------------------
+
+Thứ tự an toàn nhất:
+
+```text
+1. Xác nhận raw_data -> processed_data ổn
+2. Build lại index/chunks
+3. Tạo SFT dataset cho LFM2
+4. Fine-tune LFM2 vào models/lfm2_rag_lora
+5. Đánh giá LFM2 trên valid/test
+6. Chạy PPO cho Qwen vào models/qwen_ppo
+7. Đánh giá lại toàn pipeline
+```
+
+Không nên:
+
+- Train Qwen trước khi có dữ liệu workflow sạch.
+- Fine-tune LFM2 trực tiếp từ PDF.
+- Dùng `data/test/` trong lúc training.
+- Ghi đè `models/lfm2_rag/`.
+
+
+Bước 10. Tóm tắt lệnh chính
+---------------------------
+
+Chuẩn bị và kiểm tra dữ liệu:
+
+```bash
+find data/processed_data -maxdepth 1 -type f -name "*.txt" | wc -l
+find data/train -maxdepth 1 -type f | sort
+find data/test -maxdepth 1 -type f | sort
+```
+
+Fine-tune LFM2:
+
+```bash
+python scripts/train_lfm2_sft.py \
+  --model_name_or_path models/lfm2_rag \
+  --processed_dir data/processed_data \
+  --train_questions data/train/questions.json \
+  --train_answers data/train/reference_answers.json \
+  --eval_questions data/test/questions.json \
+  --eval_answers data/test/reference_answers.json \
+  --output_dir models/lfm2_rag_lora \
+  --max_context_chars 3000 \
+  --max_seq_length 2048 \
+  --per_device_train_batch_size 1 \
+  --gradient_accumulation_steps 8 \
+  --use_4bit \
+  --use_lora
+```
+
+Chạy PPO Qwen:
+
+```bash
+python scripts/train_qwen_ppo.py \
+  --model_path models/qwen \
+  --dataset data/training/cafef_planner_workflows.jsonl \
+  --output_dir models/qwen_ppo \
+  --max_steps 20 \
+  --batch_size 1 \
+  --mini_batch_size 1 \
+  --max_prompt_length 384 \
+  --max_new_tokens 96 \
+  --use_4bit \
+  --require_cuda
+```
+
+Đánh giá end-to-end:
+
+```bash
+python scripts/evaluate_pipeline.py \
+  --qa_file data/metadata/qa_eval_test.json \
+  --chunks_file data/chunks/chunks.json \
+  --output_file data/metadata/evaluation_after_training.json \
+  --retrieval_mode hybrid
+```
+
+Kết luận
+--------
+
+Nếu muốn mô hình học tốt nhất, hãy đi theo chuỗi:
+
+`processed_data -> chunks/index -> SFT LFM2 -> đánh giá EM/F1 -> PPO Qwen -> đánh giá end-to-end`
+
+LFM2 nên học vai trò executor bám context.
+Qwen nên học vai trò planner sinh workflow JSON sạch và ổn định.
