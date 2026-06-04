@@ -17,7 +17,7 @@ Nếu không tìm thấy câu trả lời nguyên văn, chỉ trả lời: KHÔN
 
 @dataclass(slots=True)
 class ExecutorConfig:
-    model_name: str = "MiniMaxAI/MiniMax-M2.1"
+    model_name: str = "LiquidAI/LFM2-1.2B-RAG"
     local_files_only: bool = True
     device_map: str | None = "auto"
     load_in_4bit: bool = False
@@ -30,7 +30,7 @@ class ExecutorConfig:
 
 
 class ExecutorAgent:
-    """Extractive QA executor backed by local MiniMax-M2.1 when available."""
+    """Extractive QA executor backed by local LFM2-1.2B-RAG when available."""
 
     def __init__(
         self,
@@ -71,7 +71,7 @@ class ExecutorAgent:
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError as exc:
-            raise RuntimeError("transformers is required to run local MiniMax executor_agent") from exc
+            raise RuntimeError("transformers is required to run local LFM2 executor_agent") from exc
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.config.model_name,

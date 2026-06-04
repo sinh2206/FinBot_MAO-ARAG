@@ -18,8 +18,31 @@ chunking:
     - "! "
     - " "
 
+preprocessing:
+  raw_data_dir: "data/raw_data"
+  processed_data_dir: "data/processed_data"
+  recursive: true
+  overwrite: false
+  supported_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".doc"
+    - ".txt"
+    - ".md"
+    - ".markdown"
+    - ".html"
+    - ".htm"
+    - ".csv"
+  ocr:
+    mode: "auto"
+    language: "vie+eng"
+    dpi: 150
+    min_extracted_chars: 200
+
 paths:
-  documents_dir: "data/documents"
+  raw_data_dir: "data/raw_data"
+  processed_data_dir: "data/processed_data"
+  documents_dir: "data/processed_data"
   chunks_dir: "data/chunks"
   index_dir: "data/index"
   embeddings_dir: "data/embeddings"

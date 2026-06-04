@@ -16,13 +16,18 @@ from rag_engine.embedder import EmbedderConfig, SentenceTransformerEmbedder
 from rag_engine.retriever import BM25Index, HybridRetriever, HybridRetrieverConfig
 from rag_engine.schema import Document
 from rag_engine.vector_store import FaissVectorStore
+from scripts.convert_raw_data import normalize_vietnamese_ocr_text
 from tools.file_loader import load_directory
 from tools.text_splitter import ChunkConfig, split_documents
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build offline FAISS/BM25 index from data/documents.")
-    parser.add_argument("--data_dir", default="data/documents", help="Folder containing .txt, .md, .pdf, .docx files.")
+    parser = argparse.ArgumentParser(description="Build offline FAISS/BM25 index from processed documents.")
+    parser.add_argument(
+        "--data_dir",
+        default="data/processed_data",
+        help="Folder containing processed .txt files or supported source documents.",
+    )
     parser.add_argument("--chunk_dir", default="data/chunks", help="Output folder for chunk JSON.")
     parser.add_argument("--index_dir", default="data/index", help="Output folder for FAISS/BM25 index.")
     parser.add_argument("--embedding_dir", default="data/embeddings", help="Output folder for .npy embeddings.")
@@ -49,7 +54,7 @@ def main() -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
     loaded_files = load_directory(data_dir)
-    source_documents = [item.to_document() for item in loaded_files]
+    source_documents = [normalize_document_text(item.to_document()) for item in loaded_files]
     if not source_documents:
         raise RuntimeError(f"No supported documents found in {data_dir}")
 
@@ -117,6 +122,14 @@ def main() -> None:
 
 def write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def normalize_document_text(document: Document) -> Document:
+    return Document(
+        id=document.id,
+        text=normalize_vietnamese_ocr_text(document.text),
+        metadata=document.metadata,
+    )
 
 
 if __name__ == "__main__":

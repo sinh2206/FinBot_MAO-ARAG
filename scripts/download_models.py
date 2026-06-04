@@ -7,7 +7,7 @@ from pathlib import Path
 
 DEFAULT_MODELS = {
     "qwen": ("Qwen/Qwen2.5-7B-Instruct", "qwen"),
-    "minimax": ("MiniMaxAI/MiniMax-M2.1", "minimax"),
+    "lfm2_rag": ("LiquidAI/LFM2-1.2B-RAG", "lfm2_rag"),
     "embedder": ("sentence-transformers/all-MiniLM-L6-v2", "embedder"),
     "cross_encoder": ("cross-encoder/ms-marco-MiniLM-L-6-v2", "cross_encoder"),
 }

@@ -7,8 +7,8 @@ models:
     local_files_only: true
 
   executor:
-    repo_id: "MiniMaxAI/MiniMax-M2.1"
-    local_dir: "models/minimax"
+    repo_id: "LiquidAI/LFM2-1.2B-RAG"
+    local_dir: "models/lfm2_rag"
     quantize: "4bit"
     device_map: "auto"
     local_files_only: true

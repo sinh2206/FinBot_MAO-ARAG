@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vn-stock-mao-arag:latest
+    container_name: vn-stock-mao-arag
+    env_file:
+      - .env
+    environment:
+      ENABLE_GEMINI_API: "false"
+      STREAMLIT_SERVER_HEADLESS: "true"
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+    ports:
+      - "8501:8501"
+    # Uncomment on Linux servers with NVIDIA Container Toolkit when running local LLMs.
+    # gpus: all
+    volumes:
+      - ./data:/app/data
+      - ./storage_rag:/app/storage_rag
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./cafef_news_:/app/cafef_news_:ro
+    restart: unless-stopped

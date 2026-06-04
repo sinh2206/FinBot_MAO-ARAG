@@ -13,7 +13,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 class PathConfig:
     project_root: Path = PROJECT_ROOT
     data_dir: Path = PROJECT_ROOT / "data"
-    documents_dir: Path = PROJECT_ROOT / "data" / "documents"
+    raw_data_dir: Path = PROJECT_ROOT / "data" / "raw_data"
+    processed_data_dir: Path = PROJECT_ROOT / "data" / "processed_data"
+    documents_dir: Path = PROJECT_ROOT / "data" / "processed_data"
     chunks_dir: Path = PROJECT_ROOT / "data" / "chunks"
     index_dir: Path = PROJECT_ROOT / "data" / "index"
     embeddings_dir: Path = PROJECT_ROOT / "data" / "embeddings"
@@ -38,7 +40,7 @@ class RetrievalSettings:
 @dataclass(slots=True)
 class ModelSettings:
     qwen_model_name: str = "Qwen/Qwen2.5-7B-Instruct"
-    minimax_model_name: str = "MiniMaxAI/MiniMax-M2.1"
+    executor_model_name: str = "LiquidAI/LFM2-1.2B-RAG"
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     reranker_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     local_files_only: bool = True
@@ -67,7 +69,10 @@ class AppConfig:
             ),
             models=ModelSettings(
                 qwen_model_name=os.getenv("QWEN_MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct"),
-                minimax_model_name=os.getenv("MINIMAX_MODEL_NAME", "MiniMaxAI/MiniMax-M2.1"),
+                executor_model_name=os.getenv(
+                    "EXECUTOR_MODEL_NAME",
+                    os.getenv("MINIMAX_MODEL_NAME", "LiquidAI/LFM2-1.2B-RAG"),
+                ),
                 embedding_model_name=os.getenv(
                     "EMBEDDING_MODEL_NAME",
                     "sentence-transformers/all-MiniLM-L6-v2",
@@ -82,6 +87,8 @@ class AppConfig:
 
     def ensure_directories(self) -> None:
         for path in [
+            self.paths.raw_data_dir,
+            self.paths.processed_data_dir,
             self.paths.documents_dir,
             self.paths.chunks_dir,
             self.paths.index_dir,

@@ -117,7 +117,10 @@ def build_orchestrator() -> Orchestrator:
             enable_model=env_bool("ENABLE_RERANKER", False),
         ),
         executor_agent=ExecutorAgent(
-            model_name=os.getenv("MINIMAX_MODEL_NAME", "MiniMaxAI/MiniMax-M2.1"),
+            model_name=os.getenv(
+                "EXECUTOR_MODEL_NAME",
+                os.getenv("MINIMAX_MODEL_NAME", "LiquidAI/LFM2-1.2B-RAG"),
+            ),
             enable_model=env_bool("ENABLE_LOCAL_EXECUTOR", False),
             local_files_only=env_bool("LOCAL_FILES_ONLY", True),
             load_in_4bit=env_bool("LOAD_IN_4BIT", False),

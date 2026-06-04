@@ -1,41 +1,209 @@
 # VN Stock MAO ARAG
 
-Du an minh hoa RAG agent cho truy van chung khoan Viet Nam. Luong chinh:
+Dự án minh họa kiến trúc multi-agent RAG cho truy vấn chứng khoán Việt Nam. Luồng chính:
 
-1. `core/orchestrator.py` nhan cau hoi tu UI.
-2. `agents/planner_agent.py` lap workflow bang Qwen local hoac heuristic fallback.
-3. `agents/retriever_agent.py` truy xuat tai lieu bang FAISS + BM25.
-4. `agents/reranker_agent.py` sap xep lai bang cross-encoder.
-5. `agents/executor_agent.py` tra loi extractive QA bang MiniMax local hoac heuristic fallback.
-6. `agents/aggregator_agent.py` tong hop cac sub-answer.
+1. `core/orchestrator.py` nhận câu hỏi từ UI.
+2. `agents/planner_agent.py` dùng Qwen2.5-7B-Instruct local hoặc heuristic fallback để lập workflow.
+3. `agents/retriever_agent.py` truy xuất tài liệu bằng FAISS + BM25.
+4. `agents/reranker_agent.py` sắp xếp lại đoạn văn bằng cross-encoder.
+5. `agents/executor_agent.py` dùng LFM2-1.2B-RAG local hoặc heuristic fallback để trả lời extractive QA.
+6. `agents/aggregator_agent.py` tổng hợp các câu trả lời con.
 
-## Cai dat
+## Vì sao đổi executor sang LFM2-1.2B-RAG
 
-Yeu cau nen co:
+Executor của dự án cần trả lời bám sát các đoạn đã retrieve/rerank, không cần một model quá lớn để suy luận mở rộng. MiniMax-M2.1 quá nặng cho T4/16GB và nhiều server thử nghiệm, dễ gây OOM hoặc làm chậm vòng lặp đánh giá. Vì vậy executor mặc định được đổi sang:
 
-- Python 3.10+.
-- Git va quyen ghi vao thu muc du an.
-- GPU CUDA neu muon chay Qwen/MiniMax local. CPU van chay duoc che do demo/sparse-only, nhung khong phu hop cho LLM lon.
-- Tai khoan Hugging Face va `HF_TOKEN` neu model can xac thuc.
+```text
+LiquidAI/LFM2-1.2B-RAG
+```
+
+LFM2-1.2B-RAG phù hợp hơn cho vai trò này vì:
+
+- Model khoảng 1.2B tham số, nhẹ hơn đáng kể cho inference local.
+- Được tối ưu cho Retrieval-Augmented Generation và trả lời dựa trên tài liệu đầu vào.
+- Khuyến nghị chạy greedy decoding với `temperature=0`, đúng với yêu cầu extractive QA.
+- Context dài 32K token, hữu ích khi cần đưa nhiều đoạn tin tài chính vào executor.
+
+Tài liệu tham khảo:
+
+- Hugging Face: <https://huggingface.co/LiquidAI/LFM2-1.2B-RAG>
+- Liquid Docs: <https://docs.liquid.ai/lfm/models/lfm2-1.2b-rag>
+
+## Cài đặt
+
+Yêu cầu khuyến nghị:
+
+- Python 3.10 hoặc 3.11.
+- Git và quyền ghi vào thư mục dự án.
+- GPU NVIDIA nếu muốn chạy Qwen/LFM2 local. CPU vẫn chạy được chế độ demo hoặc `sparse_only`, nhưng không phù hợp để thử LLM local nghiêm túc.
+- Tài khoản Hugging Face và `HF_TOKEN` nếu model yêu cầu xác thực.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip wheel setuptools
+pip install -r requirements.txt
+```
+
+Trên Windows:
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
+python -m pip install --upgrade pip wheel setuptools
 pip install -r requirements.txt
 ```
 
-Kiem tra nhanh moi truong:
+Kiểm tra nhanh:
 
 ```bash
 python -m compileall main.py core agents rag_engine tools ui scripts tests
-python scripts/download_models.py --dry_run --only embedder cross_encoder
+python scripts/download_models.py --dry_run --only embedder cross_encoder lfm2_rag qwen
 ```
 
-## Chay tu dau den cuoi tren Linux server
+## Chạy từ đầu trên Linux server
 
-Phan nay gia dinh server Ubuntu/Linux, co GPU NVIDIA neu muon chay Qwen/MiniMax local. Neu chi test pipeline RAG, CPU van chay duoc voi `sparse_only`.
+Hiện dự án chưa có frontend tách riêng. Màn hình thao tác duy nhất là Streamlit chạy trong service app và mở qua port `8501`. Cách khuyến nghị trên server Linux là dùng Docker Compose để đóng gói môi trường Python, còn dữ liệu/model vẫn mount từ thư mục dự án trên server.
 
-### 1. Kiem tra server
+### Cách A. Chạy bằng Docker Compose
+
+1. Kiểm tra server có Docker:
+
+```bash
+docker --version
+docker compose version
+nvidia-smi || true
+```
+
+Nếu chưa có Docker, cài Docker Engine và Docker Compose plugin theo tài liệu Linux của Docker. Nếu muốn chạy LLM local bằng GPU trong container, server cần NVIDIA driver và NVIDIA Container Toolkit.
+
+2. Clone repo:
+
+```bash
+cd ~
+git clone https://github.com/sinh2206/vn_stock_mao_arag.git
+cd vn_stock_mao_arag
+```
+
+Nếu repo đã có:
+
+```bash
+cd ~/vn_stock_mao_arag
+git pull --ff-only
+```
+
+3. Tạo `.env` cho runtime:
+
+```bash
+cp .env.example .env
+```
+
+Cấu hình nhẹ để chạy ngay trên server:
+
+```env
+ENABLE_GEMINI_API=false
+ENABLE_LOCAL_PLANNER=false
+ENABLE_LOCAL_EXECUTOR=false
+ENABLE_RERANKER=false
+LOCAL_FILES_ONLY=true
+LOAD_IN_4BIT=false
+RAG_RETRIEVAL_MODE=sparse_only
+RAG_DOCUMENT_PATH=data/chunks/cafef_news_chunks.json
+RAG_INDEX_PATH=data/index
+```
+
+4. Build image:
+
+```bash
+docker compose build
+```
+
+5. Nếu cần xử lý lại raw CafeF trước khi chạy app:
+
+```bash
+docker compose run --rm app python scripts/process_cafef_news.py \
+  --input_dir cafef_news_ \
+  --storage_dir storage_rag/cafef_news \
+  --documents_out data/documents/cafef_news.jsonl \
+  --chunks_out data/chunks/cafef_news_chunks.json \
+  --training_dir data/training \
+  --metadata_dir data/metadata
+```
+
+Nếu dữ liệu hiện tại vẫn còn trong `data/`, bước này có thể bỏ qua.
+
+6. Chạy app Streamlit trên server:
+
+```bash
+docker compose up -d
+```
+
+Mở từ máy cá nhân:
+
+```text
+http://server_ip:8501
+```
+
+Hoặc tunnel qua SSH:
+
+```bash
+ssh -L 8501:localhost:8501 user@server_ip
+```
+
+Sau đó mở:
+
+```text
+http://localhost:8501
+```
+
+7. Xem log và dừng app:
+
+```bash
+docker compose logs -f app
+docker compose down
+```
+
+8. Chạy test trong container:
+
+```bash
+docker compose run --rm app python -m pytest -q
+```
+
+9. Tải model local trong container nếu muốn bật Qwen/LFM2:
+
+```bash
+docker compose run --rm app python scripts/download_models.py --only embedder cross_encoder lfm2_rag qwen
+```
+
+Sau khi tải xong, sửa `.env`:
+
+```env
+ENABLE_LOCAL_PLANNER=true
+ENABLE_LOCAL_EXECUTOR=true
+LOAD_IN_4BIT=true
+QWEN_MODEL_NAME=models/qwen
+EXECUTOR_MODEL_NAME=models/lfm2_rag
+EMBEDDING_MODEL_NAME=models/embedder
+RERANKER_MODEL_NAME=models/cross_encoder
+```
+
+Rồi restart:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+Các volume trong `docker-compose.yml`:
+
+- `./data:/app/data`: documents, chunks, index, metadata, training files.
+- `./storage_rag:/app/storage_rag`: processed RAG artifacts.
+- `./models:/app/models`: Hugging Face model files và adapter.
+- `./reports:/app/reports`: báo cáo/evaluation output.
+- `./cafef_news_:/app/cafef_news_:ro`: raw CafeF, mount read-only.
+
+### Cách B. Chạy trực tiếp bằng Python
+
+### 1. Kiểm tra server
 
 ```bash
 pwd
@@ -44,12 +212,11 @@ git --version
 nvidia-smi || true
 ```
 
-Khuyen nghi:
+Khuyến nghị:
 
-- Python 3.10 hoac 3.11.
-- GPU NVIDIA 16GB+ VRAM de thu Qwen 7B 4-bit.
-- MiniMax-M2.1 rat nang; khong nen bat tren GPU T4/16GB neu chua test rieng.
-- Dung `tmux` hoac `screen` khi tai model/build index/training de tranh mat session SSH.
+- GPU 8GB+ VRAM có thể thử LFM2 executor.
+- GPU 16GB+ VRAM phù hợp hơn khi bật Qwen2.5-7B-Instruct 4-bit.
+- Dùng `tmux` hoặc `screen` khi tải model, build index hoặc training để tránh mất session SSH.
 
 ### 2. Clone repo
 
@@ -59,14 +226,14 @@ git clone https://github.com/sinh2206/vn_stock_mao_arag.git
 cd vn_stock_mao_arag
 ```
 
-Neu repo da clone:
+Nếu repo đã clone:
 
 ```bash
 cd ~/vn_stock_mao_arag
 git pull --ff-only
 ```
 
-### 3. Tao moi truong Python
+### 3. Tạo môi trường Python
 
 ```bash
 python3 -m venv .venv
@@ -75,17 +242,16 @@ python -m pip install --upgrade pip wheel setuptools
 pip install -r requirements.txt
 ```
 
-Neu server dung CUDA va can cai lai PyTorch dung ban CUDA phu hop, cai PyTorch truoc, sau do moi cai requirements. Vi du voi CUDA 12.1:
+Nếu cần cài PyTorch đúng CUDA, cài PyTorch trước rồi mới cài requirements. Ví dụ CUDA 12.1:
 
 ```bash
 pip install --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio
 pip install -r requirements.txt
 ```
 
-Kiem tra import co ban:
+Kiểm tra CUDA:
 
 ```bash
-python -m compileall main.py core agents rag_engine tools ui scripts tests
 python - <<'PY'
 import torch
 print("cuda_available:", torch.cuda.is_available())
@@ -93,13 +259,15 @@ print("gpu:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "C
 PY
 ```
 
-### 4. Cau hinh runtime
+### 4. Cấu hình runtime
+
+Tạo `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-Che do an toan de test pipeline truoc:
+Chế độ nhẹ để test pipeline trước:
 
 ```env
 ENABLE_LOCAL_PLANNER=false
@@ -112,113 +280,194 @@ RAG_DOCUMENT_PATH=data/chunks/chunks.json
 RAG_INDEX_PATH=data/index
 ```
 
-Sau khi model da tai xong va muon bat Qwen planner:
+Sau khi đã tải model local và muốn bật Qwen planner + LFM2 executor:
 
 ```env
 ENABLE_LOCAL_PLANNER=true
-ENABLE_LOCAL_EXECUTOR=false
+ENABLE_LOCAL_EXECUTOR=true
 ENABLE_RERANKER=false
 LOCAL_FILES_ONLY=true
 LOAD_IN_4BIT=true
+
 QWEN_MODEL_NAME=models/qwen
-MINIMAX_MODEL_NAME=models/minimax
+EXECUTOR_MODEL_NAME=models/lfm2_rag
 EMBEDDING_MODEL_NAME=models/embedder
 RERANKER_MODEL_NAME=models/cross_encoder
+
 RAG_RETRIEVAL_MODE=sparse_only
+RAG_DOCUMENT_PATH=data/chunks/chunks.json
+RAG_INDEX_PATH=data/index
 ```
 
-Chi bat MiniMax khi server du RAM/VRAM:
+Ghi chú tương thích: code vẫn đọc `MINIMAX_MODEL_NAME` nếu `.env` cũ còn biến này, nhưng cấu hình mới nên dùng `EXECUTOR_MODEL_NAME`.
 
-```env
-ENABLE_LOCAL_EXECUTOR=true
-```
+### 5. Tải model
 
-### 5. Tai model
-
-Neu model tren Hugging Face yeu cau token:
+Nếu Hugging Face yêu cầu token:
 
 ```bash
 export HF_TOKEN=hf_xxx
 ```
 
-Tai model nhe cho retrieval/index:
+Tải model nhẹ cho retrieval/index:
 
 ```bash
 python scripts/download_models.py --only embedder cross_encoder
 ```
 
-Tai Qwen planner:
+Tải Qwen planner:
 
 ```bash
 python scripts/download_models.py --only qwen
 ```
 
-Tai MiniMax executor neu server du tai nguyen:
+Tải LFM2 executor:
 
 ```bash
-python scripts/download_models.py --only minimax
+python scripts/download_models.py --only lfm2_rag
 ```
 
-Kiem tra file model:
+Tải tất cả model mặc định:
+
+```bash
+python scripts/download_models.py
+```
+
+Kiểm tra file model:
 
 ```bash
 find models -maxdepth 2 -type f | head -50
 ```
 
-### 6. Chuan bi data
+## Chuẩn bị dữ liệu
 
-Neu co raw CafeF folder:
+Trong repo này có hai nhóm dữ liệu cần phân biệt rõ:
+
+- `cafef_news_/`: raw data CafeF, gồm nhiều CSV tin tức, sentiment, giá và feature theo mã cổ phiếu. Đây là nguồn đầu vào để chuẩn hóa lại.
+- `storage_rag/`: processed data đã có dạng artifact RAG theo từng ticker, gồm `docstore.json`, `default__vector_store.json`, `image__vector_store.json`, `graph_store.json`, `index_store.json`. Đây là dữ liệu đã xử lý, dùng để đối chiếu, kiểm tra lại chunk/context hoặc làm nguồn phục hồi corpus.
+
+### Trạng thái dữ liệu hiện tại
+
+Tính theo artifact đang có trong workspace, dữ liệu đã được xử lý:
+
+- `cafef_news_/` vẫn là thư mục raw chính, hiện có các CSV tin tức, sentiment, feature giá và một số artifact phụ từ các thử nghiệm cũ.
+- `data/metadata/cafef_processing_summary.json` ghi `input_dir` là `cafef_news_/cafef_news`, nghĩa là raw folder này đã được chạy qua pipeline chuẩn hóa.
+- Kết quả đã sinh `34.440` documents vào `data/documents/cafef_news.jsonl`.
+- Kết quả đã sinh `44.715` chunks vào `data/chunks/cafef_news_chunks.json`.
+- Kết quả đã sinh `20.000` dòng QA extractive vào `data/training/cafef_extractive_qa.jsonl`.
+- Kết quả đã sinh `30` workflow planner vào `data/training/cafef_planner_workflows.jsonl`.
+- `storage_rag/cafef_news/` hiện có processed artifact cho `38` ticker từ CafeF.
+- `storage_rag/` cấp gốc cũng có nhiều thư mục ticker đã xử lý sẵn như `FPT`, `HPG`, `VCB`, `SSI`, dùng tốt cho audit context/RAG nhưng nên đồng bộ lại từ raw nếu muốn training sạch.
+
+Vì vậy không cần xử lý lại chỉ để chạy demo. Chỉ xử lý lại khi muốn tái tạo sạch dataset, đổi chunk size, đổi rule lọc dữ liệu, hoặc chuẩn bị một lần huấn luyện mới.
+
+### Xử lý raw `cafef_news_/`
+
+Chạy pipeline chuẩn hóa raw CSV:
 
 ```bash
-python scripts/process_cafef_news.py --input_dir cafef_news-20260211T204544Z-1-001
+python scripts/process_cafef_news.py \
+  --input_dir cafef_news_ \
+  --storage_dir storage_rag/cafef_news \
+  --documents_out data/documents/cafef_news.jsonl \
+  --chunks_out data/chunks/cafef_news_chunks.json \
+  --training_dir data/training \
+  --metadata_dir data/metadata
 ```
 
-Lenh nay tao:
+Script sẽ:
+
+- Đọc CSV bằng nhiều encoding (`utf-8-sig`, `utf-8`, `cp1258`, `latin1`).
+- Nhận diện dòng `news`, `daily_sentiment`, `price_feature` hoặc bảng thường.
+- Chuẩn hóa mỗi dòng thành `Document` có `ticker`, `target_ticker`, `date`, `title`, `url`, `source`.
+- Sinh chunk RAG vào `data/chunks/cafef_news_chunks.json`.
+- Sinh QA extractive cho executor vào `data/training/cafef_extractive_qa.jsonl`.
+- Sinh workflow mẫu cho planner vào `data/training/cafef_planner_workflows.jsonl`.
+- Ghi summary vào `data/metadata/cafef_processing_summary.json`.
+- Ghi artifact dạng `storage_rag/cafef_news/<TICKER>/`.
+
+Các file `.pt`, `.pth`, `.joblib`, `.png` trong raw folder không dùng làm corpus text cho LFM2. Chỉ đưa vào training những dòng có text đủ dài, metadata rõ và không trùng fingerprint.
+
+### Dùng processed `storage_rag/`
+
+`storage_rag/` hiện đã có processed data theo ticker như `FPT`, `HPG`, `VCB`, `SSI`. Nếu cần kiểm tra hoặc tái tạo corpus từ processed data, ưu tiên đọc `docstore.json` vì text nằm ở:
 
 ```text
-data/documents/cafef_news.jsonl
-data/chunks/cafef_news_chunks.json
-data/training/cafef_extractive_qa.jsonl
-data/training/cafef_planner_workflows.jsonl
-storage_rag/cafef_news/<TICKER>/
+docstore/data/*/__data__/text
 ```
 
-Neu dung document rieng, copy vao:
+Quy tắc sử dụng:
+
+- Dùng `storage_rag/<TICKER>/docstore.json` để audit context, kiểm tra câu trả lời LFM2 có bám nguồn không.
+- Không fine-tune trực tiếp từ vector store hoặc embedding; chỉ fine-tune từ text/context và QA đã kiểm định.
+- Nếu cần đồng bộ lại format mới, chạy lại `scripts/process_cafef_news.py` từ raw `cafef_news_/` để sinh `data/*` nhất quán.
+- Không đưa toàn bộ báo cáo dài vào một sample SFT; phải chunk, chọn context vừa đủ, rồi tạo answer ngắn có căn cứ.
+
+Nếu dùng tài liệu riêng, đặt vào `data/documents/`, rồi build index:
 
 ```bash
 mkdir -p data/documents
 cp /path/to/files/* data/documents/
-```
-
-Build index tu documents:
-
-```bash
 python scripts/build_index.py --data_dir data/documents --local_files_only
 ```
 
-Neu chi muon test nhanh bang chunks CafeF da process, co the cau hinh:
+Nếu chỉ muốn test nhanh bằng chunks CafeF đã xử lý:
 
 ```env
 RAG_DOCUMENT_PATH=data/chunks/cafef_news_chunks.json
 RAG_RETRIEVAL_MODE=sparse_only
 ```
 
-### 7. Chay test/smoke test
+## Gemini API ẩn
 
-Chay unit tests:
+Dự án có thể cài sẵn Gemini API để phục vụ soạn dữ liệu phụ trợ hoặc audit thủ công sau này, nhưng mặc định phải ẩn và không tham gia pipeline đánh giá local models.
+
+Cài SDK chính thức:
 
 ```bash
-pytest -q
+pip install google-genai
 ```
 
-Neu chua cai pytest:
+Trong `.env`, giữ trạng thái tắt:
+
+```env
+ENABLE_GEMINI_API=false
+GEMINI_API_KEY=
+GEMINI_MODEL_NAME=gemini-2.5-flash
+```
+
+Khi cần dùng riêng ngoài benchmark, đặt key trong `.env` local hoặc biến môi trường:
+
+```bash
+export GEMINI_API_KEY=your_key_here
+```
+
+Không commit `.env`; `.gitignore` đã loại `.env` và `.env.*`. Theo tài liệu Google AI, SDK Python hiện dùng package `google-genai`, client tự đọc `GEMINI_API_KEY` hoặc `GOOGLE_API_KEY` từ môi trường. Nguồn tham khảo: <https://ai.google.dev/gemini-api/docs/quickstart> và <https://ai.google.dev/gemini-api/docs/api-key>.
+
+Quy tắc hiện tại:
+
+- Không gọi Gemini trong `core/orchestrator.py`.
+- Không gọi Gemini trong `scripts/evaluate_pipeline.py`.
+- Không dùng Gemini làm judge khi so sánh Qwen planner và LFM2 executor.
+- Không dùng output Gemini làm ground truth nếu chưa audit thủ công.
+- Nếu sau này bật Gemini để tạo candidate QA, file sinh ra phải để riêng, ví dụ `data/training/gemini_candidates.jsonl`, rồi lọc thủ công trước khi nhập vào `lfm2_rag_sft.jsonl`.
+
+## Chạy test và UI
+
+Chạy unit test:
+
+```bash
+PYTHONPATH=. python -m pytest -q
+```
+
+Nếu chưa cài pytest:
 
 ```bash
 python -m pip install pytest
-pytest -q
+PYTHONPATH=. python -m pytest -q
 ```
 
-Smoke test pipeline bang Python:
+Smoke test pipeline bằng Python:
 
 ```bash
 python - <<'PY'
@@ -249,84 +498,33 @@ print(result["plan"])
 PY
 ```
 
-### 8. Chay UI tren server
-
-Chay noi bo:
+Chạy UI:
 
 ```bash
 streamlit run main.py --server.address 0.0.0.0 --server.port 8501
 ```
 
-Mo firewall/security group port `8501`, hoac tunnel qua SSH:
+Nếu chạy qua SSH:
 
 ```bash
 ssh -L 8501:localhost:8501 user@server_ip
 ```
 
-Sau do mo tren may ca nhan:
+Sau đó mở:
 
 ```text
 http://localhost:8501
 ```
 
-### 9. Chay nhu service nen
+## Đánh giá trước khi training
 
-Dung `tmux`:
+Cần tách ba việc:
 
-```bash
-tmux new -s mao-rag
-source .venv/bin/activate
-streamlit run main.py --server.address 0.0.0.0 --server.port 8501
-```
+1. RAG indexing: không phải training LLM, chỉ biến documents/chunks thành index để truy xuất.
+2. Planner training: huấn luyện Qwen2.5-7B-Instruct tạo workflow JSON đúng.
+3. Executor training: fine-tune LFM2-1.2B-RAG để trả lời bám context, ưu tiên trích xuất đúng span và tránh hallucination.
 
-Detach: `Ctrl-b`, sau do bam `d`.
-
-Attach lai:
-
-```bash
-tmux attach -t mao-rag
-```
-
-## Training va test hieu qua
-
-Can tach 3 viec khac nhau:
-
-1. **RAG indexing**: khong phai training LLM. Day la buoc bien documents/chunks thanh index de truy xuat.
-2. **Planner training**: huan luyen Qwen tao workflow JSON dung.
-3. **Executor training**: huan luyen/kiem tra extractive QA, uu tien tra loi dung span trong context.
-
-### 1. Chuan bi dataset dung
-
-Dataset nen nam trong:
-
-```text
-data/training/cafef_planner_workflows.jsonl
-data/training/cafef_extractive_qa.jsonl
-data/metadata/qa_eval.json
-```
-
-Planner row nen co dang chat messages:
-
-```json
-{"messages":[{"role":"system","content":"Bạn là planner_agent..."},{"role":"user","content":"So sánh FPT và HPG"},{"role":"assistant","content":"{\"strategy\":\"parallel\",\"sub_queries\":[...]}"}]}
-```
-
-Executor row nen co:
-
-```json
-{"question":"Tin CafeF về FPT có tiêu đề gì?","context":"...","answer":"..."}
-```
-
-Nguyen tac chat luong:
-
-- Bo dong answer khong nam nguyen van trong context.
-- Tach train/validation/test theo thoi gian de tranh leakage. Vi du train truoc 2025-08, validation 2025-08, test 2025-09.
-- Khong dua prediction/report sinh boi model vao train neu chua audit.
-- Giu metadata `ticker`, `date`, `source`, `url` de debug loi.
-
-### 2. Baseline truoc khi training
-
-Luon do baseline truoc:
+Luôn đo baseline trước:
 
 ```bash
 python scripts/evaluate_pipeline.py \
@@ -336,7 +534,7 @@ python scripts/evaluate_pipeline.py \
   --output_file data/metadata/evaluation_sparse.json
 ```
 
-Sau do moi so sanh voi hybrid/reranker/local LLM:
+So sánh với hybrid:
 
 ```bash
 python scripts/evaluate_pipeline.py \
@@ -346,22 +544,127 @@ python scripts/evaluate_pipeline.py \
   --output_file data/metadata/evaluation_hybrid.json
 ```
 
-Metric can theo doi:
+Metric nên theo dõi:
 
-- Retrieval: recall@5, recall@10 neu co expected doc ids.
-- Executor: Exact Match, token F1, ty le answer nam trong context.
-- Planner: ty le JSON parse duoc, dung strategy, dung so sub-query, dung tool.
-- End-to-end: answer EM/F1 va latency.
+- Retrieval: recall@5, recall@10 nếu có expected doc ids.
+- Executor LFM2: Exact Match, token F1, tỷ lệ câu trả lời là substring hoặc được chứng minh trực tiếp từ context.
+- Planner Qwen: tỷ lệ JSON parse được, đúng strategy, đúng số sub-query, đúng tool.
+- End-to-end: EM/F1, groundedness, latency và VRAM.
 
-### 3. PPO cho Qwen planner
+## Fine-tune executor LFM2-1.2B-RAG
 
-Kiem tra dataset/prompt truoc:
+### 1. Mục tiêu fine-tune
+
+Không fine-tune LFM2 để "biết thêm" dữ liệu chứng khoán. Dữ liệu mới phải nằm trong RAG index. Fine-tune executor chỉ nên nhằm:
+
+- Tuân thủ prompt tiếng Việt.
+- Trả lời ngắn, có căn cứ, không bịa ngoài context.
+- Biết trả lời `KHÔNG TÌM THẤY` khi context không đủ.
+- Trích xuất đúng số liệu, mã cổ phiếu, ngày, tiêu đề, nguồn tin.
+
+### 2. Format dataset SFT
+
+File khuyến nghị:
+
+```text
+data/training/lfm2_rag_sft.jsonl
+```
+
+Mỗi dòng nên là chat messages:
+
+```json
+{"messages":[{"role":"system","content":"Bạn là executor_agent cho RAG chứng khoán Việt Nam. Chỉ trả lời dựa trên tài liệu được cung cấp. Nếu không có căn cứ, trả lời KHÔNG TÌM THẤY."},{"role":"user","content":"Tài liệu:\n<document1>FPT công bố lợi nhuận sau thuế quý II đạt 2.100 tỷ đồng...</document1>\n\nCâu hỏi: Lợi nhuận sau thuế quý II của FPT là bao nhiêu?"},{"role":"assistant","content":"2.100 tỷ đồng"}]}
+```
+
+Nguyên tắc dữ liệu:
+
+- `assistant.content` phải có căn cứ trực tiếp trong context.
+- Thêm mẫu phủ định, trong đó context không chứa đáp án và output là `KHÔNG TÌM THẤY`.
+- Tách train/validation/test theo thời gian để tránh leakage, ví dụ train trước `2025-08-01`, validation trong tháng `2025-08`, test từ `2025-09-01`.
+- Giữ metadata ngoài prompt nếu cần debug: `ticker`, `date`, `source`, `url`, `doc_id`.
+- Không đưa báo cáo do model sinh vào train nếu chưa audit thủ công.
+
+### 3. Chuyển CafeF QA sang SFT cho LFM2
+
+Sau khi chạy `scripts/process_cafef_news.py`, file gần nhất với SFT executor là:
+
+```text
+data/training/cafef_extractive_qa.jsonl
+```
+
+File này có dạng:
+
+```json
+{"question":"Tin CafeF về FPT ngày ... có tiêu đề gì?","context":"...","answer":"...","metadata":{"ticker":"FPT","date":"...","source":"..."}}
+```
+
+Để fine-tune LFM2, chuyển mỗi row sang chat format:
+
+```json
+{"messages":[{"role":"system","content":"Bạn là executor_agent cho RAG chứng khoán Việt Nam. Chỉ trả lời dựa trên tài liệu được cung cấp. Nếu không có căn cứ, trả lời KHÔNG TÌM THẤY."},{"role":"user","content":"Tài liệu:\n<document1>...</document1>\n\nCâu hỏi: ..."},{"role":"assistant","content":"..."}],"metadata":{"ticker":"FPT","date":"...","source":"..."}}
+```
+
+Quy trình lọc trước khi train:
+
+- Giữ row có `answer` nằm nguyên văn trong `context`.
+- Loại row quá dài hoặc context nhiễu bảng trống.
+- Loại row thiếu `ticker`, `source` hoặc mốc thời gian nếu cần đánh giá theo thời gian.
+- Tạo thêm negative samples bằng cách ghép câu hỏi với context sai ticker/ngày và đặt answer là `KHÔNG TÌM THẤY`.
+- Chia train/valid/test theo `date`, không random theo dòng vì tin cùng ngày rất dễ leak.
+
+Lệnh gợi ý cho bước chuyển format nếu viết script riêng:
+
+```bash
+python scripts/prepare_lfm2_sft.py \
+  --input data/training/cafef_extractive_qa.jsonl \
+  --train_out data/training/lfm2_rag_sft.jsonl \
+  --valid_out data/training/lfm2_rag_valid.jsonl \
+  --test_out data/training/lfm2_rag_test.jsonl
+```
+
+Nếu dùng `storage_rag/` làm nguồn kiểm tra, chỉ đọc text từ `docstore.json`, sau đó tạo QA cùng format trên. Không dùng embedding hoặc vector id làm target training.
+
+### 4. SFT bằng LoRA/QLoRA với TRL
+
+Cài thêm dependency:
+
+```bash
+pip install "transformers>=4.55" accelerate peft trl bitsandbytes datasets
+```
+
+Lệnh mẫu nếu có script SFT riêng:
+
+```bash
+python scripts/train_lfm2_sft.py \
+  --model_name_or_path models/lfm2_rag \
+  --train_file data/training/lfm2_rag_sft.jsonl \
+  --eval_file data/training/lfm2_rag_valid.jsonl \
+  --output_dir models/lfm2_rag_lora \
+  --load_in_4bit \
+  --learning_rate 2e-5 \
+  --num_train_epochs 2 \
+  --per_device_train_batch_size 1 \
+  --gradient_accumulation_steps 8 \
+  --max_seq_length 8192
+```
+
+Nếu chưa có `scripts/train_lfm2_sft.py`, tạo script này trước theo `trl.SFTTrainer` + `peft.LoraConfig`. Không ghi đè `models/lfm2_rag`; chỉ lưu adapter vào `models/lfm2_rag_lora`.
+
+## PPO cho Qwen planner khi train lại
+
+Nguồn planner:
+
+```text
+data/training/cafef_planner_workflows.jsonl
+```
+
+Chạy dry-run:
 
 ```bash
 python scripts/train_qwen_ppo.py --dry_run
 ```
 
-Chay thu rat nho:
+Chạy PPO nhỏ:
 
 ```bash
 python scripts/train_qwen_ppo.py \
@@ -373,288 +676,176 @@ python scripts/train_qwen_ppo.py \
   --mini_batch_size 1
 ```
 
-Neu on dinh moi tang:
+Khi ổn định mới tăng `max_steps`. PPO hiện tối ưu workflow JSON cho planner; không dùng Gemini làm judge.
 
-```bash
-python scripts/train_qwen_ppo.py \
-  --model_path models/qwen \
-  --dataset data/training/cafef_planner_workflows.jsonl \
-  --output_dir models/qwen_ppo \
-  --max_steps 200 \
-  --batch_size 2 \
-  --mini_batch_size 1 \
-  --learning_rate 1e-6
-```
+## Đánh giá và promote model sau train lại
 
-Can theo doi:
-
-- Reward trung binh co tang khong.
-- Output co con parse duoc JSON khong.
-- Model co bi lap text hoac them markdown khong.
-- VRAM co on dinh khong: `watch -n 1 nvidia-smi`.
-
-Luu y: PPO script hien la skeleton reward theo format JSON/workflow. De training thuc su hieu qua, nen nang reward len dua tren validation set: parse JSON, chon dung sequential/parallel, sub-query lien quan, va end-to-end answer tot hon baseline.
-
-### 4. Executor training/test
-
-Voi executor extractive QA, khong nen uu tien sinh tu do. Truoc tien test heuristic/retrieval:
+Sau khi có adapter/checkpoint mới, chạy lại benchmark cùng một QA file:
 
 ```bash
 python scripts/evaluate_pipeline.py \
   --qa_file data/training/cafef_extractive_qa.jsonl \
   --chunks_file data/chunks/cafef_news_chunks.json \
   --retrieval_mode sparse_only \
-  --output_file data/metadata/executor_eval.json
+  --output_file data/metadata/evaluation_after_training.json
 ```
 
-Neu muon fine-tune executor, dataset phai dam bao:
+Chỉ promote model nếu:
 
-- `answer` la substring cua `context`.
-- Context khong qua dai.
-- Cau hoi khong mo ho.
-- Tach ticker/date de khong leak cung bai vao train va test.
+- Retrieval recall không giảm.
+- LFM2 giảm hallucination và tăng EM/F1 hoặc groundedness.
+- Qwen planner tăng JSON validity và workflow đúng hơn.
+- Latency/VRAM vẫn phù hợp runtime mục tiêu.
+- Gemini vẫn tắt trong toàn bộ quá trình đánh giá hai model local.
 
-### 5. Quy trinh khuyen nghi
 
-Thu tu nen lam:
+## Các bước huấn luyện lại từ đầu
 
-```text
-1. Chay sparse_only + heuristic planner/executor.
-2. Tao qa_eval.json nho, co ground truth ro.
-3. Do baseline EM/F1.
-4. Build hybrid index va so sanh recall/latency.
-5. Bat reranker neu latency chap nhan duoc.
-6. Bat Qwen planner 4-bit va so sanh planner JSON validity.
-7. Chi training PPO sau khi baseline/eval da on.
-8. Khong bat MiniMax executor neu chua co GPU/RAM du va eval baseline ro.
-```
+Quy trình train lại sạch cho dự án là tái tạo data từ raw `cafef_news_/`, build lại RAG artifacts, fine-tune adapter LFM2 executor và PPO checkpoint Qwen planner. Không pretrain LFM2 từ random init.
 
-Tieu chi “hieu qua” thuc dung:
-
-- Neu retrieval recall thap, sua chunking/index truoc, chua training LLM.
-- Neu planner sai workflow, fine-tune/PPO Qwen planner.
-- Neu executor bia hoac tra loi ngoai context, ep extractive prompt va loc dataset span.
-- Neu latency cao, giam `top_k`, tat reranker, hoac cache index/model.
-
-## Chuan bi cau hinh
-
-Tao file cau hinh local tu template:
+1. Dọn artifact sinh lại, nhưng giữ nguyên `cafef_news_/`, `storage_rag/`, `.env` và base models nếu đã tải:
 
 ```bash
-copy .env.example .env
+rm -f data/documents/cafef_news.jsonl data/chunks/cafef_news_chunks.json
+rm -f data/training/cafef_extractive_qa.jsonl data/training/cafef_planner_workflows.jsonl
+rm -f data/metadata/cafef_processing_summary.json
+rm -rf data/index/* data/embeddings/* storage_rag/cafef_news
+rm -rf models/lfm2_rag_lora models/qwen_ppo
 ```
 
-Tren macOS/Linux:
+2. Cài dependencies và tải lại base models nếu cần:
 
 ```bash
-cp .env.example .env
+source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/download_models.py --only embedder cross_encoder lfm2_rag qwen
 ```
 
-Che do nhe de kiem tra pipeline truoc khi tai LLM:
+3. Xử lý lại raw CafeF:
+
+```bash
+python scripts/process_cafef_news.py \
+  --input_dir cafef_news_ \
+  --storage_dir storage_rag/cafef_news \
+  --documents_out data/documents/cafef_news.jsonl \
+  --chunks_out data/chunks/cafef_news_chunks.json \
+  --training_dir data/training \
+  --metadata_dir data/metadata \
+  --chunk_size 384 \
+  --chunk_overlap_ratio 0.2 \
+  --max_training_rows 20000
+```
+
+4. Kiểm tra số lượng output:
+
+```bash
+wc -l data/documents/cafef_news.jsonl data/training/cafef_extractive_qa.jsonl data/training/cafef_planner_workflows.jsonl
+python -c 'import json; print(json.load(open("data/metadata/cafef_processing_summary.json", encoding="utf-8")))'
+```
+
+5. Build lại index hoặc dùng chunks trực tiếp. Với chế độ nhẹ, đặt `.env`:
 
 ```env
-ENABLE_LOCAL_PLANNER=false
-ENABLE_LOCAL_EXECUTOR=false
-ENABLE_RERANKER=false
+RAG_DOCUMENT_PATH=data/chunks/cafef_news_chunks.json
 RAG_RETRIEVAL_MODE=sparse_only
 ```
 
-Sau khi da tai model ve `models/`, doi sang local path:
+Với hybrid/dense index:
 
-```env
-ENABLE_LOCAL_PLANNER=true
-ENABLE_LOCAL_EXECUTOR=true
-ENABLE_RERANKER=true
-
-QWEN_MODEL_NAME=models/qwen
-MINIMAX_MODEL_NAME=models/minimax
-EMBEDDING_MODEL_NAME=models/embedder
-RERANKER_MODEL_NAME=models/cross_encoder
-
-RAG_RETRIEVAL_MODE=hybrid
-RAG_DOCUMENT_PATH=data/chunks/chunks.json
-RAG_INDEX_PATH=data/index
+```bash
+python scripts/build_index.py --data_dir data/documents --local_files_only
 ```
 
-Y nghia cac file config:
+6. Đo baseline trước training:
 
-- `config/agent_config.yaml`: tham so cho planner, executor, retriever, reranker.
-- `config/model_config.yaml`: repo Hugging Face va local folder cho tung model.
-- `config/retrieval_config.yaml`: `chunk_size`, overlap, `top_k`, dense/sparse/hybrid weight.
-- `.env`: cau hinh runtime uu tien cao nhat cho UI va scripts local.
+```bash
+python scripts/evaluate_pipeline.py \
+  --qa_file data/training/cafef_extractive_qa.jsonl \
+  --chunks_file data/chunks/cafef_news_chunks.json \
+  --retrieval_mode sparse_only \
+  --output_file data/metadata/evaluation_baseline_sparse.json
+```
 
-## Chuan bi model local
+7. Chuẩn bị `lfm2_rag_sft.jsonl` từ `cafef_extractive_qa.jsonl`, lọc row mà answer không có căn cứ trong context, thêm negative samples `KHÔNG TÌM THẤY`, rồi tách train/valid/test theo `date`.
 
-Model duoc tai ve thu muc `models/`:
+8. Fine-tune LFM2 bằng LoRA/QLoRA vào `models/lfm2_rag_lora`; không ghi đè `models/lfm2_rag`.
+
+9. Train/PPO Qwen planner từ `data/training/cafef_planner_workflows.jsonl` vào `models/qwen_ppo`.
+
+10. Đánh giá lại bằng cùng QA file, promote model chỉ khi retrieval recall không giảm, LFM2 ít hallucination hơn, Qwen JSON validity tốt hơn và Gemini vẫn tắt trong benchmark.
+
+## Cấu trúc model local
+
+Model được tải về thư mục `models/`:
 
 ```text
 models/
-  qwen/           # Qwen/Qwen2.5-7B-Instruct, dung cho planner_agent
-  minimax/        # MiniMaxAI/MiniMax-M2.1, dung cho executor_agent
+  qwen/           # Qwen/Qwen2.5-7B-Instruct, dùng cho planner_agent
+  lfm2_rag/       # LiquidAI/LFM2-1.2B-RAG, dùng cho executor_agent
   embedder/       # sentence-transformers/all-MiniLM-L6-v2
   cross_encoder/  # cross-encoder/ms-marco-MiniLM-L-6-v2
 ```
 
-Tai rieng model nhe truoc de build index va test retrieval:
+Ý nghĩa các file cấu hình:
 
-```bash
-python scripts/download_models.py --only embedder cross_encoder
-```
+- `config/agent_config.yaml`: tham số cho planner, executor, retriever, reranker.
+- `config/model_config.yaml`: repo Hugging Face và local folder cho từng model.
+- `config/retrieval_config.yaml`: `chunk_size`, overlap, `top_k`, dense/sparse/hybrid weight.
+- `.env`: cấu hình runtime ưu tiên cao nhất cho UI và scripts local.
 
-Tai Qwen planner:
+## Google Colab T4
 
-```bash
-python scripts/download_models.py --only qwen
-```
-
-Tai MiniMax executor:
-
-```bash
-python scripts/download_models.py --only minimax
-```
-
-Tai tat ca:
-
-```bash
-python scripts/download_models.py
-```
-
-Neu model yeu cau xac thuc, dat token truoc khi tai:
-
-```bash
-set HF_TOKEN=hf_xxx
-python scripts/download_models.py --only qwen minimax
-```
-
-Tren macOS/Linux:
-
-```bash
-export HF_TOKEN=hf_xxx
-python scripts/download_models.py --only qwen minimax
-```
-
-Luu y thuc te:
-
-- Qwen2.5-7B-Instruct duoc dung lam `planner_agent`: tach sub-query, quyet dinh sequential/parallel, tra workflow JSON.
-- MiniMax-M2.1 duoc dung lam `executor_agent`: extractive QA tren cac doan van da retrieve/rerank.
-- MiniMax-M2.1 co the rat nang. Neu may khong du GPU/RAM, giu `ENABLE_LOCAL_EXECUTOR=false` de dung heuristic fallback trong khi phat trien pipeline.
-- Tham so `quantize: 4bit` trong YAML la cau hinh muc tieu. Code hien tai load qua `transformers`; neu muon ep 4-bit that su, can bo sung `bitsandbytes`/`BitsAndBytesConfig` phu hop voi moi truong CUDA.
-
-## Chay UI
-
-```bash
-streamlit run main.py
-```
-
-Mac dinh `.env` dang de cac model nang o che do tat (`false`) va retrieval la `sparse_only` de demo chay nhe. Khi da tai model local, co the doi:
+Mở [main.ipynb](main.ipynb) trên Colab, chọn runtime GPU T4 rồi chạy các cell theo thứ tự. Cấu hình khuyến nghị trên T4:
 
 ```env
 ENABLE_LOCAL_PLANNER=true
 ENABLE_LOCAL_EXECUTOR=true
-ENABLE_RERANKER=true
-RAG_RETRIEVAL_MODE=hybrid
+ENABLE_RERANKER=false
+LOAD_IN_4BIT=true
+QWEN_MODEL_NAME=models/qwen
+EXECUTOR_MODEL_NAME=models/lfm2_rag
+RAG_RETRIEVAL_MODE=sparse_only
 ```
 
-Khong can OpenAI API hay API ngoai. Tat ca model duoc cau hinh de chay local.
+Nếu T4 bị thiếu VRAM khi bật cả Qwen và LFM2, tắt planner local trước để kiểm tra executor:
 
-## Du lieu
+```env
+ENABLE_LOCAL_PLANNER=false
+ENABLE_LOCAL_EXECUTOR=true
+```
 
-Dat tai lieu goc trong `data/documents/` voi dinh dang `.txt`, `.md`, `.pdf` hoac `.docx`, sau do build index:
+Hoặc tắt executor local để kiểm tra planner:
+
+```env
+ENABLE_LOCAL_PLANNER=true
+ENABLE_LOCAL_EXECUTOR=false
+```
+
+## Lệnh vận hành nhanh
 
 ```bash
-python scripts/build_index.py --data_dir data/documents
-```
-
-Script se tao:
-
-- `data/chunks/chunks.json`
-- `data/index/`
-- `data/embeddings/embeddings.npy`
-- `data/metadata/`
-
-Co the nap nhanh corpus dang JSON tai `data/chunks/chunks.json` voi moi item co dang:
-
-```json
-{"id": "doc_1", "text": "VNINDEX dong cua o 1.280 diem.", "metadata": {"source": "demo"}}
-```
-
-Neu chua co corpus/index, UI se dung vai doan demo ngan de van khoi dong duoc.
-
-Checklist truoc khi training/fine-tune hoac danh gia nghiem tuc:
-
-- Cai dependency va compile code thanh cong.
-- Tai it nhat `embedder` de build vector index.
-- Build index tu `data/documents`.
-- Xac nhan `.env` dang tro toi local model path trong `models/`.
-- Chay UI voi mot cau hoi mau va kiem tra debug panel co workflow, passages va score.
-- Khong commit `models/`, index, embeddings hoac `.env`; cac muc nay da duoc `.gitignore` bo qua.
-
-## Lenh van hanh nhanh
-
-```bash
-python scripts/download_models.py --only embedder cross_encoder
+python scripts/download_models.py --only embedder cross_encoder lfm2_rag
 python scripts/build_index.py --data_dir data/documents
 streamlit run main.py
 ```
 
-## Chay tren Google Colab T4
-
-Mo [main.ipynb](main.ipynb) tren Colab, chon runtime GPU T4, sau do chon `Runtime > Run all`.
-
-Notebook se tu dong:
-
-- Clone `https://github.com/sinh2206/vn_stock_mao_arag.git` vao `/content/vn_stock_mao_arag`.
-- Cai dependencies tu `requirements.txt`.
-- Tao `.env` cho Colab.
-- Chuan bi chunks tu CafeF data neu co, neu khong thi dung `storage_rag`, neu van khong co thi dung demo fallback.
-- Tai model can thiet vao `models/`.
-- Chay sanity test pipeline RAG.
-- Chay dry-run PPO readiness cho Qwen planner.
-
-Mac dinh tren T4:
-
-- Qwen2.5-7B-Instruct planner duoc bat va load 4-bit neu model tai thanh cong.
-- MiniMax-M2.1 executor tat de tranh OOM tren T4; executor dung extractive heuristic fallback.
-- Retrieval mode la `sparse_only` de dam bao notebook chay on dinh. Co the doi sang `hybrid` sau khi da build dense index.
-
-Neu muon thu MiniMax tren runtime lon hon T4, sua cell cau hinh:
-
-```python
-USE_MINIMAX_EXECUTOR = True
-DOWNLOAD_MINIMAX = True
-```
-
-Danh gia pipeline voi tap QA JSON/JSONL:
-
-```bash
-python scripts/evaluate_pipeline.py --qa_file data/metadata/qa_eval.json
-```
-
-## Xu ly data CafeF
-
-Neu co thu muc `cafef_news-20260211T204544Z-1-001/`, chuyen no thanh corpus RAG, training JSONL va artifact giong `storage_rag`:
-
-```bash
-python scripts/process_cafef_news.py --input_dir cafef_news-20260211T204544Z-1-001
-```
-
-Output chinh:
-
-- `data/documents/cafef_news.jsonl`: documents chuan hoa tu CSV.
-- `data/chunks/cafef_news_chunks.json`: chunks de build/search RAG.
-- `data/training/cafef_extractive_qa.jsonl`: QA extractive cho executor.
-- `data/training/cafef_planner_workflows.jsonl`: workflow examples cho planner.
-- `storage_rag/cafef_news/<TICKER>/`: `docstore.json`, `default__vector_store.json`, `image__vector_store.json`, `graph_store.json`, `index_store.json`.
-- `data/metadata/cafef_processing_summary.json`: thong ke output.
-
-Chay dry-run PPO cho Qwen planner:
+Chạy dry-run PPO cho Qwen planner:
 
 ```bash
 python scripts/train_qwen_ppo.py --dry_run
 ```
 
-Chay PPO that su can GPU, `models/qwen` da tai ve, va dependency `trl`, `peft`, `torch`:
+Chạy PPO thật cần GPU, `models/qwen` đã tải về, và dependency `trl`, `peft`, `torch`:
 
 ```bash
-python scripts/train_qwen_ppo.py --model_path models/qwen --dataset data/training/cafef_planner_workflows.jsonl --output_dir models/qwen_ppo
+python scripts/train_qwen_ppo.py \
+  --model_path models/qwen \
+  --dataset data/training/cafef_planner_workflows.jsonl \
+  --output_dir models/qwen_ppo
 ```
+
+## Checklist trước khi đánh giá nghiêm túc
+
+- Dependency cài xong và `python -m compileall ...` chạy thành công.
+- Đã tải ít nhất `embedder` để build vector index.
+- Đã build index từ `data/documents` hoặc cấu hình đ
