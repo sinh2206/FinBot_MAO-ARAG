@@ -1,0 +1,310 @@
+{
+  "project": "vn_stock_mao_arag",
+  "generated_at": "2026-06-05T08:03:28.509919+00:00",
+  "architecture": "Phi planner -> Qwen executor -> Gemini fallback",
+  "evaluation_basis": {
+    "questions": "data/test/questions.json",
+    "answers": "data/test/reference_answers.json",
+    "processed_dir": "data/processed_data",
+    "chunks_file": "data/chunks/chunks.json"
+  },
+  "modes": {
+    "qa_type_filter": "multi_hop",
+    "enable_gemini_fallback": true,
+    "local_files_only": true,
+    "load_in_4bit": true
+  },
+  "score_formula": {
+    "executor_score": "0.30*exact_match + 0.30*f1 + 0.25*numeric_accuracy + 0.15*groundedness",
+    "retrieval_component_score": "mean(component_count_ok, component_support_rate, evidence_number_coverage_when_available)",
+    "end_to_end_score": "0.25*planner_score + 0.25*retrieval_component_score + 0.35*executor_score + 0.15*groundedness"
+  },
+  "notes": {
+    "multi_hop_rule": "Chi riêng multi-hop, planner phải sinh được sub-queries; sub-queries retrieval phải tìm được bằng chứng trong data/processed_data; đáp án cuối cùng vẫn chấm theo reference_answers.json.",
+    "fallback_rule": "Gemini chỉ được gọi khi Qwen trả về rỗng hoặc KHÔNG TÌM THẤY."
+  },
+  "metrics": {
+    "count": 12,
+    "planner_score": 1.0,
+    "planner_source_accuracy": 1.0,
+    "planner_qa_type_accuracy": 1.0,
+    "exact_match": 0.0,
+    "f1": 0.027900498675393487,
+    "numeric_accuracy": 0.16666666666666666,
+    "groundedness": 0.08333333333333333,
+    "executor_score": 0.06253681626928471,
+    "component_support_rate": 1.0,
+    "evidence_number_coverage": 0.6375000000000001,
+    "component_count_ok_rate": 0.0,
+    "retrieval_component_score": 0.5458333333333333,
+    "end_to_end_score": 0.420846219027583,
+    "fallback_usage_rate": 0.4166666666666667,
+    "by_qa_type": {
+      "multi_hop": {
+        "count": 12,
+        "planner_score": 1.0,
+        "exact_match": 0.0,
+        "f1": 0.027900498675393487,
+        "numeric_accuracy": 0.16666666666666666,
+        "groundedness": 0.08333333333333333,
+        "executor_score": 0.06253681626928471,
+        "component_support_rate": 1.0,
+        "evidence_number_coverage": 0.6375000000000001,
+        "component_count_ok_rate": 0.0,
+        "retrieval_component_score": 0.5458333333333333,
+        "end_to_end_score": 0.420846219027583,
+        "fallback_usage_rate": 0.4166666666666667
+      }
+    },
+    "failure_summary": {
+      "planner_invalid_json": 0,
+      "planner_wrong_source": 0,
+      "multi_hop_missing_components": 12,
+      "multi_hop_component_not_grounded": 0,
+      "executor_not_found": 5,
+      "gemini_fallback_used": 5
+    }
+  },
+  "predictions": [
+    {
+      "index": 1,
+      "id": "BFC_2025_Q3_19",
+      "qa_type": "multi_hop",
+      "ticker": "BFC",
+      "query": "Chi phí bán hàng Quý III/2025 của BFC giảm bao nhiêu so với Quý III/2024?",
+      "reference_answer": "44.166.301.839 VND",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
+      "selected_sources": [
+        "BFC-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.5,
+      "retrieval_component_score": 0.5,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.375
+    },
+    {
+      "index": 2,
+      "id": "BFC_2025_Q3_20",
+      "qa_type": "multi_hop",
+      "ticker": "BFC",
+      "query": "Hai mảng báo cáo bộ phận của BFC đóng góp doanh thu thuần 9 tháng 2025 bao nhiêu?",
+      "reference_answer": "6.511.382.819.394 VND và 1.636.979.108.965 VND",
+      "prediction": "Doanh thu thuần 9 tháng 2025 của hai mảng báo cáo bộ phận của BFC là 8.148.361.928.359 VND.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "BFC-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 1.0,
+      "retrieval_component_score": 0.6666666666666666,
+      "executor_score": 0.1760869565217391,
+      "end_to_end_score": 0.6282971014492753
+    },
+    {
+      "index": 3,
+      "id": "DPG_2025_Q3_19",
+      "qa_type": "multi_hop",
+      "ticker": "DPG",
+      "query": "Doanh thu thuần lũy kế 9 tháng 2025 của DPG tăng bao nhiêu so với 9 tháng 2024?",
+      "reference_answer": "714.661.327.513 VND",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
+      "selected_sources": [
+        "DPG-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.6666666666666666,
+      "retrieval_component_score": 0.5555555555555555,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.38888888888888884
+    },
+    {
+      "index": 4,
+      "id": "DPG_2025_Q3_20",
+      "qa_type": "multi_hop",
+      "ticker": "DPG",
+      "query": "Vốn cổ phiếu phổ thông có quyền biểu quyết của DPG tăng bao nhiêu so với đầu năm?",
+      "reference_answer": "377.994.780.000 VND",
+      "prediction": "Vốn cổ phiếu phổ thông có quyền biểu quyết của DPG tăng 378.000.000.000 đồng so với đầu năm.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "DPG-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 1.0,
+      "retrieval_component_score": 0.6666666666666666,
+      "executor_score": 0.25,
+      "end_to_end_score": 0.5041666666666667
+    },
+    {
+      "index": 5,
+      "id": "DPM_2025_Q3_19",
+      "qa_type": "multi_hop",
+      "ticker": "DPM",
+      "query": "LNST công ty mẹ lũy kế 9 tháng 2025 của DPM tăng bao nhiêu so với 9 tháng 2024?",
+      "reference_answer": "286.471.725.373 VND",
+      "prediction": "Lợi nhuận sau thuế của công ty mẹ lũy kế 9 tháng 2025 của DPM là 236,000,000,000 VND, tăng 132,000,000,000 VND so với 104,000,000,000 VND của cùng kỳ 2024.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "DPM-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.6666666666666666,
+      "retrieval_component_score": 0.5555555555555555,
+      "executor_score": 0.019354838709677417,
+      "end_to_end_score": 0.39566308243727594
+    },
+    {
+      "index": 6,
+      "id": "DPM_2025_Q3_20",
+      "qa_type": "multi_hop",
+      "ticker": "DPM",
+      "query": "Lưu chuyển tiền thuần từ hoạt động kinh doanh của DPM giảm bao nhiêu so với cùng kỳ?",
+      "reference_answer": "2.135.226.032.114 VND",
+      "prediction": "Lưu chuyển tiền thuần từ hoạt động kinh doanh của DPM giảm 2,135,226,032,116 đồng so với cùng kỳ.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "DPM-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.6666666666666666,
+      "retrieval_component_score": 0.5555555555555555,
+      "executor_score": 0.25,
+      "end_to_end_score": 0.47638888888888886
+    },
+    {
+      "index": 7,
+      "id": "HVN_2025_Q3_19",
+      "qa_type": "multi_hop",
+      "ticker": "HVN",
+      "query": "Lợi nhuận thuần từ hoạt động kinh doanh Quý III/2025 chiếm bao nhiêu phần trăm lũy kế 9 tháng của HVN?",
+      "reference_answer": "11,08%",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
+      "selected_sources": [
+        "HVN-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.4,
+      "retrieval_component_score": 0.4666666666666666,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.36666666666666664
+    },
+    {
+      "index": 8,
+      "id": "HVN_2025_Q3_20",
+      "qa_type": "multi_hop",
+      "ticker": "HVN",
+      "query": "Trong 9 tháng đầu năm 2025, HVN phát hành tăng vốn cổ phần bao nhiêu?",
+      "reference_answer": "8.971.040.370.000 VND",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
+      "selected_sources": [
+        "HVN-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.6666666666666666,
+      "retrieval_component_score": 0.5555555555555555,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.38888888888888884
+    },
+    {
+      "index": 9,
+      "id": "PNJ_2025_Q3_19",
+      "qa_type": "multi_hop",
+      "ticker": "PNJ",
+      "query": "Lãi cơ bản trên cổ phiếu lũy kế 9 tháng 2025 của PNJ tăng bao nhiêu so với 9 tháng 2024?",
+      "reference_answer": "602 VND/cổ phiếu",
+      "prediction": "Lãi cơ bản trên cổ phiếu lũy kế 9 tháng 2025 của PNJ tăng 239.487.501.634 VND so với 9 tháng 2024.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "PNJ-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.3333333333333333,
+      "retrieval_component_score": 0.4444444444444444,
+      "executor_score": 0.024999999999999998,
+      "end_to_end_score": 0.3698611111111111
+    },
+    {
+      "index": 10,
+      "id": "PNJ_2025_Q3_20",
+      "qa_type": "multi_hop",
+      "ticker": "PNJ",
+      "query": "Số lượng nhân viên PNJ tại 30/09/2025 giảm bao nhiêu so với 31/12/2024?",
+      "reference_answer": "910 nhân viên",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
+      "selected_sources": [
+        "PNJ-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.75,
+      "retrieval_component_score": 0.5833333333333334,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.39583333333333337
+    },
+    {
+      "index": 11,
+      "id": "REE_2025_Q3_19",
+      "qa_type": "multi_hop",
+      "ticker": "REE",
+      "query": "LNST công ty mẹ Quý III/2025 chiếm khoảng bao nhiêu phần trăm lũy kế 9 tháng của REE?",
+      "reference_answer": "35,32%",
+      "prediction": "LNST công ty mẹ Quý III/2025 chiếm khoảng 8.1% lũy kế 9 tháng của REE.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "REE-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.5,
+      "retrieval_component_score": 0.5,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.375
+    },
+    {
+      "index": 12,
+      "id": "REE_2025_Q3_20",
+      "qa_type": "multi_hop",
+      "ticker": "REE",
+      "query": "Lãi cơ bản trên cổ phiếu Quý III/2025 của REE tăng bao nhiêu điểm so với Quý III/2024?",
+      "reference_answer": "359 VND/cổ phiếu",
+      "prediction": "Lãi cơ bản trên cổ phiếu Quý III/2025 của REE tăng 2.056.199.554 VND so với Quý III/2024.",
+      "executor_used": "qwen",
+      "selected_sources": [
+        "REE-Q3.ocr_text.txt"
+      ],
+      "planner_score": 1.0,
+      "component_count_ok": false,
+      "component_support_rate": 1.0,
+      "evidence_number_coverage": 0.5,
+      "retrieval_component_score": 0.5,
+      "executor_score": 0.03,
+      "end_to_end_score": 0.3855
+    }
+  ]
+}

@@ -6,8 +6,8 @@ from pathlib import Path
 
 
 DEFAULT_MODELS = {
+    "phi": ("microsoft/Phi-4-mini-instruct", "phi"),
     "qwen": ("Qwen/Qwen2.5-7B-Instruct", "qwen"),
-    "minimax": ("MiniMaxAI/MiniMax-M2.1", "minimax"),
     "embedder": ("sentence-transformers/all-MiniLM-L6-v2", "embedder"),
     "cross_encoder": ("cross-encoder/ms-marco-MiniLM-L-6-v2", "cross_encoder"),
 }

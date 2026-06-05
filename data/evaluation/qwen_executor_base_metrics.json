@@ -1,0 +1,8 @@
+{
+  "count": 24,
+  "exact_match": 0.4583333333333333,
+  "f1": 0.6277777777777779,
+  "numeric_accuracy": 0.7916666666666666,
+  "groundedness": 0.5416666666666666,
+  "executor_score": 0.605
+}

@@ -1,129 +1,173 @@
 from __future__ import annotations
 
+import hashlib
+import mimetypes
 import re
 from dataclasses import dataclass, field
-from html.parser import HTMLParser
 from pathlib import Path
 from typing import Iterable
 
 from rag_engine.schema import Document
 
 
-SUPPORTED_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf", ".docx"}
+SUPPORTED_EXTENSIONS = {
+    ".csv",
+    ".doc",
+    ".docx",
+    ".htm",
+    ".html",
+    ".md",
+    ".markdown",
+    ".pdf",
+    ".txt",
+}
 
 
 @dataclass(slots=True)
 class LoadedFile:
+    """Text content loaded from one source file."""
+
     path: Path
     text: str
-    metadata: dict[str, str] = field(default_factory=dict)
+    loader: str
+    metadata: dict[str, object] = field(default_factory=dict)
+
+    @property
+    def id(self) -> str:
+        source = str(self.metadata.get("relative_path") or self.path.name)
+        digest = hashlib.sha1(source.encode("utf-8")).hexdigest()[:12]
+        return f"doc-{digest}"
 
     def to_document(self) -> Document:
-        return Document(
-            id=str(self.path),
-            text=self.text,
-            metadata={
-                "source": str(self.path),
-                "filename": self.path.name,
-                "extension": self.path.suffix.lower(),
-                **self.metadata,
-            },
-        )
+        metadata = {
+            "source": str(self.path),
+            "source_file": self.path.name,
+            "file_name": self.path.name,
+            "file_stem": self.path.stem,
+            "extension": self.path.suffix.lower(),
+            "loader": self.loader,
+            "mime_type": mimetypes.guess_type(str(self.path))[0],
+            "text_length": len(self.text),
+            **self.metadata,
+        }
+        return Document(id=self.id, text=self.text, metadata=metadata)
 
 
-class _HTMLTextExtractor(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.parts: list[str] = []
+def load_directory(
+    directory: str | Path,
+    *,
+    recursive: bool = True,
+    extensions: Iterable[str] | None = None,
+    clean: bool = True,
+) -> list[LoadedFile]:
+    """Load all supported files from a directory into normalized text."""
 
-    def handle_data(self, data: str) -> None:
-        if data.strip():
-            self.parts.append(data)
+    root = Path(directory)
+    if not root.exists():
+        raise FileNotFoundError(f"Directory does not exist: {root}")
+    if not root.is_dir():
+        raise NotADirectoryError(f"Expected a directory: {root}")
 
-    def get_text(self) -> str:
-        return " ".join(self.parts)
+    allowed = normalize_extensions(extensions or SUPPORTED_EXTENSIONS)
+    pattern = "**/*" if recursive else "*"
+    loaded: list[LoadedFile] = []
+    for path in sorted(root.glob(pattern)):
+        if not path.is_file() or path.suffix.lower() not in allowed:
+            continue
+        item = load_file(path, clean=clean)
+        item.metadata["relative_path"] = str(path.relative_to(root))
+        loaded.append(item)
+    return loaded
 
 
-def load_file(path: str | Path) -> LoadedFile:
+def load_file(path: str | Path, *, clean: bool = True) -> LoadedFile:
+    """Load one supported file into text."""
+
     source = Path(path)
     if not source.exists():
         raise FileNotFoundError(source)
     if not source.is_file():
-        raise ValueError(f"Expected a file path, got directory: {source}")
+        raise ValueError(f"Expected a file: {source}")
 
     suffix = source.suffix.lower()
-    if suffix == ".pdf":
-        text = _load_pdf(source)
-    elif suffix == ".docx":
-        text = _load_docx(source)
-    elif suffix in {".md", ".markdown"}:
-        text = _load_markdown(source)
-    elif suffix == ".txt":
-        text = source.read_text(encoding="utf-8", errors="ignore")
-    else:
+    if suffix not in SUPPORTED_EXTENSIONS:
         raise ValueError(f"Unsupported file extension: {suffix}")
 
-    return LoadedFile(path=source, text=clean_text(text))
+    text, loader = convert_source(source)
+    if clean:
+        text = clean_text(text)
+    return LoadedFile(path=source, text=text, loader=loader)
 
 
-def load_directory(
-    data_dir: str | Path,
-    extensions: Iterable[str] = SUPPORTED_EXTENSIONS,
-    recursive: bool = True,
-) -> list[LoadedFile]:
-    root = Path(data_dir)
-    if not root.exists():
-        raise FileNotFoundError(root)
-    allowed = {item.lower() for item in extensions}
-    pattern = "**/*" if recursive else "*"
-    files = [path for path in root.glob(pattern) if path.is_file() and path.suffix.lower() in allowed]
-    return [load_file(path) for path in sorted(files)]
+def convert_source(source: Path) -> tuple[str, str]:
+    """Convert a source file using the same converters as raw-data conversion."""
+
+    suffix = source.suffix.lower()
+    try:
+        from scripts.convert_raw_data import convert_file
+
+        return convert_file(
+            source,
+            ocr_mode="auto",
+            ocr_lang="vie+eng",
+            ocr_dpi=150,
+            min_extracted_chars=200,
+        )
+    except ImportError:
+        return fallback_convert_source(source, suffix)
+
+
+def fallback_convert_source(source: Path, suffix: str) -> tuple[str, str]:
+    if suffix in {".txt", ".md", ".markdown"}:
+        return source.read_text(encoding="utf-8", errors="ignore"), suffix.lstrip(".")
+    if suffix == ".csv":
+        return source.read_text(encoding="utf-8-sig", errors="ignore"), "csv_text"
+    if suffix in {".html", ".htm"}:
+        raw = source.read_text(encoding="utf-8", errors="ignore")
+        return re.sub(r"<[^>]+>", " ", raw), "html_fallback"
+    if suffix == ".pdf":
+        try:
+            from PyPDF2 import PdfReader
+        except ImportError as exc:
+            raise RuntimeError("PyPDF2 is required for PDF loading") from exc
+        pages = []
+        reader = PdfReader(str(source))
+        for index, page in enumerate(reader.pages, start=1):
+            page_text = page.extract_text() or ""
+            if page_text.strip():
+                pages.append(f"[page {index}]\n{page_text}")
+        return "\n\n".join(pages), "pdf_text"
+    if suffix == ".docx":
+        try:
+            from docx import Document as DocxDocument
+        except ImportError as exc:
+            raise RuntimeError("python-docx is required for DOCX loading") from exc
+        document = DocxDocument(str(source))
+        paragraphs = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
+        return "\n\n".join(paragraphs), "docx"
+    raise RuntimeError(f"No fallback converter for {suffix}")
 
 
 def clean_text(text: str) -> str:
-    text = text.replace("\x00", " ")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
-
-
-def _load_pdf(path: Path) -> str:
+    value = text.replace("\x00", " ")
     try:
-        from PyPDF2 import PdfReader
-    except ImportError as exc:
-        raise RuntimeError("PyPDF2 is required to read PDF files") from exc
+        from scripts.convert_raw_data import normalize_vietnamese_ocr_text
 
-    reader = PdfReader(str(path))
-    pages = []
-    for index, page in enumerate(reader.pages, start=1):
-        try:
-            page_text = page.extract_text() or ""
-        except Exception:
-            page_text = ""
-        if page_text.strip():
-            pages.append(f"[page {index}]\n{page_text}")
-    return "\n\n".join(pages)
-
-
-def _load_markdown(path: Path) -> str:
-    raw = path.read_text(encoding="utf-8", errors="ignore")
-    try:
-        import markdown
+        value = normalize_vietnamese_ocr_text(value)
     except ImportError:
-        return raw
+        pass
+    value = value.replace("\r\n", "\n").replace("\r", "\n")
+    value = re.sub(r"[ \t\f\v]+", " ", value)
+    value = re.sub(r" *\n *", "\n", value)
+    value = re.sub(r"\n{3,}", "\n\n", value)
+    return value.strip()
 
-    html = markdown.markdown(raw)
-    parser = _HTMLTextExtractor()
-    parser.feed(html)
-    return parser.get_text() or raw
 
-
-def _load_docx(path: Path) -> str:
-    try:
-        from docx import Document as DocxDocument
-    except ImportError as exc:
-        raise RuntimeError("python-docx is required to read DOCX files") from exc
-
-    document = DocxDocument(str(path))
-    paragraphs = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
-    return "\n\n".join(paragraphs)
+def normalize_extensions(values: Iterable[str]) -> set[str]:
+    normalized = set()
+    for value in values:
+        item = value.lower().strip()
+        if not item:
+            continue
+        normalized.add(item if item.startswith(".") else f".{item}")
+    return normalized

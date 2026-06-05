@@ -1,30 +1,16 @@
 # Local Models
 
-This folder stores downloaded model snapshots. Large model files are ignored by git.
+Thư mục này chứa các model local của dự án.
 
-Expected layout:
+## Cấu trúc mong đợi
 
-```text
-models/
-  qwen/           # Qwen/Qwen2.5-7B-Instruct, planner_agent
-  minimax/        # MiniMaxAI/MiniMax-M2.1, executor_agent
-  embedder/       # sentence-transformers/all-MiniLM-L6-v2
-  cross_encoder/  # cross-encoder/ms-marco-MiniLM-L-6-v2
-```
+- `models/phi/`: `microsoft/Phi-4-mini-instruct`, dùng làm planner/coordinator.
+- `models/qwen/`: `Qwen/Qwen2.5-7B-Instruct`, dùng làm executor chính.
+- `models/qwen_executor_lora/`: adapter LoRA sau fine-tune cho Qwen executor.
+- `models/embedder/`: `sentence-transformers/all-MiniLM-L6-v2`, dùng cho dense retrieval.
+- `models/cross_encoder/`: `cross-encoder/ms-marco-MiniLM-L-6-v2`, dùng cho rerank.
 
-Download commands:
+## Ghi chú
 
-```bash
-python scripts/download_models.py --only embedder cross_encoder
-python scripts/download_models.py --only qwen
-python scripts/download_models.py --only minimax
-```
-
-After download, point `.env` to local folders:
-
-```env
-QWEN_MODEL_NAME=models/qwen
-MINIMAX_MODEL_NAME=models/minimax
-EMBEDDING_MODEL_NAME=models/embedder
-RERANKER_MODEL_NAME=models/cross_encoder
-```
+- Gemini là executor dự phòng qua API, nên không có thư mục local riêng.
+- Không nên commit file trọng số lớn vào git. Thư mục này chỉ nên giữ metadata, README hoặc `.gitkeep`.

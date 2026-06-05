@@ -1,0 +1,120 @@
+{"id": "REE_2025_Q3_01", "query": "Trụ sở chính của REE nằm ở đâu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_02", "query": "Hoạt động chính của Nhóm công ty REE gồm những mảng nào?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_03", "query": "Ai là kế toán trưởng của REE trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_04", "query": "Ai là người lập báo cáo tài chính hợp nhất Quý III/2025 của REE?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_05", "query": "Tiền và các khoản tương đương tiền của REE tại 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_06", "query": "Hàng tồn kho của REE tại cuối Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_07", "query": "Tổng cộng tài sản của REE tại ngày 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_08", "query": "Vốn chủ sở hữu của REE cuối kỳ Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_09", "query": "Doanh thu thuần Quý III/2025 của REE là bao nhiêu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_10", "query": "Lợi nhuận sau thuế của công ty mẹ REE trong Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_11", "query": "Tổng tài sản của REE tăng bao nhiêu so với đầu năm 2025? ", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_12", "query": "Tỷ lệ nợ phải trả trên vốn chủ sở hữu của REE tại 30/09/2025 xấp xỉ bao nhiêu?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_13", "query": "Tổng vay và nợ thuê tài chính ngắn hạn cộng dài hạn của REE cuối Quý III/2025 là bao nhiêu?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_14", "query": "Doanh thu thuần Quý III/2025 của REE tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_15", "query": "Biên lợi nhuận gộp Quý III/2025 của REE là bao nhiêu?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_16", "query": "Lợi nhuận sau thuế công ty mẹ Quý III/2025 của REE tăng bao nhiêu so với cùng kỳ?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_17", "query": "Những mảng nào được REE nêu là góp phần chính vào tăng trưởng lợi nhuận Quý III/2025?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_18", "query": "Tiền và tương đương tiền của REE giảm bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_19", "query": "LNST công ty mẹ Quý III/2025 chiếm khoảng bao nhiêu phần trăm lũy kế 9 tháng của REE?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "REE_2025_Q3_20", "query": "Lãi cơ bản trên cổ phiếu Quý III/2025 của REE tăng bao nhiêu điểm so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "REE", "source_file": "REE-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_01", "query": "Trụ sở của Vietnam Airlines trong báo cáo Quý III/2025 ở đâu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_02", "query": "Lĩnh vực kinh doanh của công ty mẹ HVN là gì?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_03", "query": "Ai là kế toán trưởng của HVN theo báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_04", "query": "Ai là Tổng giám đốc của HVN trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_05", "query": "Tiền và các khoản tương đương tiền của HVN tại 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_06", "query": "Tổng tài sản của HVN tại ngày 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_07", "query": "Nợ phải trả của HVN tại ngày 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_08", "query": "Vốn chủ sở hữu của HVN tại cuối Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_09", "query": "Doanh thu thuần Quý III/2025 của HVN là bao nhiêu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_10", "query": "Lợi nhuận sau thuế của công ty mẹ HVN trong Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_11", "query": "Tổng tài sản của HVN tăng bao nhiêu so với đầu năm 2025?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_12", "query": "Tiền và tương đương tiền của HVN tăng bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_13", "query": "Tổng vay và nợ thuê tài chính ngắn hạn cộng dài hạn của HVN tại 30/09/2025 là bao nhiêu?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_14", "query": "Doanh thu thuần Quý III/2025 của HVN tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_15", "query": "Biên lợi nhuận gộp Quý III/2025 của HVN xấp xỉ bao nhiêu?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_16", "query": "Lợi nhuận sau thuế Quý III/2025 của HVN thay đổi thế nào so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_17", "query": "LNST công ty mẹ lũy kế 9 tháng 2025 của HVN tăng bao nhiêu so với 9 tháng 2024?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_18", "query": "Tỷ lệ nợ phải trả trên vốn chủ sở hữu của HVN tại cuối Quý III/2025 khoảng bao nhiêu?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_19", "query": "Lợi nhuận thuần từ hoạt động kinh doanh Quý III/2025 chiếm bao nhiêu phần trăm lũy kế 9 tháng của HVN?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "HVN_2025_Q3_20", "query": "Trong 9 tháng đầu năm 2025, HVN phát hành tăng vốn cổ phần bao nhiêu?", "qa_type": "multi_hop", "ticker": "HVN", "source_file": "HVN-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_01", "query": "Mã chứng khoán của Công ty Cổ phần Phân bón Bình Điền là gì?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_02", "query": "Địa chỉ của BFC trong công bố thông tin là ở đâu?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_03", "query": "Lĩnh vực kinh doanh của BFC là gì?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_04", "query": "Ai là kế toán trưởng của BFC trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_05", "query": "Ai là Tổng giám đốc của BFC trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_06", "query": "Tiền và các khoản tương đương tiền của BFC tại cuối kỳ là bao nhiêu?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_07", "query": "Hàng tồn kho của BFC tại 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_08", "query": "Tổng cộng tài sản của BFC cuối Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_09", "query": "Vốn góp của chủ sở hữu BFC cuối kỳ là bao nhiêu?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_10", "query": "Doanh thu thuần Quý III/2025 của BFC là bao nhiêu?", "qa_type": "single_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_11", "query": "Tổng tài sản của BFC tăng bao nhiêu so với đầu năm 2025?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_12", "query": "Tiền và tương đương tiền của BFC giảm bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_13", "query": "Hàng tồn kho của BFC tăng bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_14", "query": "Tổng vay và nợ thuê tài chính của BFC cuối kỳ là bao nhiêu?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_15", "query": "Doanh thu thuần Quý III/2025 của BFC tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_16", "query": "Biên lợi nhuận gộp Quý III/2025 của BFC xấp xỉ bao nhiêu?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_17", "query": "LNST Quý III/2025 của BFC tăng bao nhiêu so với cùng kỳ?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_18", "query": "Doanh thu thuần lũy kế 9 tháng 2025 của BFC tăng bao nhiêu so với 9 tháng 2024?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_19", "query": "Chi phí bán hàng Quý III/2025 của BFC giảm bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "BFC_2025_Q3_20", "query": "Hai mảng báo cáo bộ phận của BFC đóng góp doanh thu thuần 9 tháng 2025 bao nhiêu?", "qa_type": "multi_hop", "ticker": "BFC", "source_file": "BFC-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_01", "query": "Địa chỉ của Tổng Công ty Phân bón và Hóa chất Dầu khí - CTCP trong báo cáo là gì?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_02", "query": "Lĩnh vực kinh doanh của DPM là gì?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_03", "query": "Ngành nghề kinh doanh chính của DPM là gì?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_04", "query": "Ai là kế toán trưởng của DPM trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_05", "query": "Ai là người lập biểu của DPM?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_06", "query": "Tiền và các khoản tương đương tiền của DPM cuối kỳ là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_07", "query": "Hàng tồn kho của DPM tại ngày 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_08", "query": "Tổng cộng tài sản của DPM cuối kỳ là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_09", "query": "Vốn chủ sở hữu của DPM tại cuối Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_10", "query": "Doanh thu thuần Quý III/2025 của DPM là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_11", "query": "Tổng tài sản của DPM tăng bao nhiêu so với đầu kỳ?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_12", "query": "Tiền và tương đương tiền của DPM giảm bao nhiêu so với đầu kỳ?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_13", "query": "Hàng tồn kho của DPM tăng bao nhiêu so với đầu kỳ?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_14", "query": "Nợ phải trả của DPM tăng bao nhiêu so với đầu kỳ?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_15", "query": "Tổng vay và nợ thuê tài chính của DPM cuối kỳ là bao nhiêu?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_16", "query": "Biên lợi nhuận gộp Quý III/2025 của DPM xấp xỉ bao nhiêu?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_17", "query": "Tổng lợi nhuận kế toán trước thuế Quý III/2025 của DPM tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_18", "query": "Doanh thu thuần lũy kế 9 tháng 2025 của DPM tăng bao nhiêu so với 9 tháng 2024?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_19", "query": "LNST công ty mẹ lũy kế 9 tháng 2025 của DPM tăng bao nhiêu so với 9 tháng 2024?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPM_2025_Q3_20", "query": "Lưu chuyển tiền thuần từ hoạt động kinh doanh của DPM giảm bao nhiêu so với cùng kỳ?", "qa_type": "multi_hop", "ticker": "DPM", "source_file": "DPM-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_01", "query": "Tên đơn vị lập báo cáo DPG là gì?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_02", "query": "Mã số thuế của DPG là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_03", "query": "Địa chỉ trụ sở của DPG trong báo cáo là gì?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_04", "query": "Ai là kế toán trưởng của DPG trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_05", "query": "Ai là Tổng giám đốc của DPG trong báo cáo Quý III/2025?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_06", "query": "Hoạt động kinh doanh chính của DPG gồm những gì?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_07", "query": "Tiền và các khoản tương đương tiền của DPG cuối kỳ là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_08", "query": "Tổng cộng tài sản của DPG tại 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_09", "query": "Nợ phải trả của DPG cuối Quý III/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_10", "query": "Doanh thu thuần Quý III/2025 của DPG là bao nhiêu?", "qa_type": "single_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_11", "query": "Tổng tài sản của DPG tăng bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_12", "query": "Tiền và tương đương tiền của DPG giảm bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_13", "query": "Hàng tồn kho của DPG tăng bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_14", "query": "Tổng vay và nợ thuê tài chính của DPG cuối kỳ là bao nhiêu?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_15", "query": "Tỷ lệ nợ phải trả trên vốn chủ sở hữu của DPG cuối Quý III/2025 khoảng bao nhiêu?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_16", "query": "Doanh thu thuần Quý III/2025 của DPG tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_17", "query": "Biên lợi nhuận gộp Quý III/2025 của DPG xấp xỉ bao nhiêu?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_18", "query": "Lợi nhuận thuần từ hoạt động kinh doanh Quý III/2025 của DPG tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_19", "query": "Doanh thu thuần lũy kế 9 tháng 2025 của DPG tăng bao nhiêu so với 9 tháng 2024?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "DPG_2025_Q3_20", "query": "Vốn cổ phiếu phổ thông có quyền biểu quyết của DPG tăng bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "DPG", "source_file": "DPG-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_01", "query": "Trụ sở chính đăng ký của PNJ ở đâu?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_02", "query": "Chủ tịch Hội đồng quản trị của PNJ là ai?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_03", "query": "Tổng giám đốc của PNJ là ai?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_04", "query": "Kế toán trưởng của PNJ là ai?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_05", "query": "Hoạt động chính của PNJ là gì?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_06", "query": "PNJ có bao nhiêu cửa hàng kinh doanh tại 30/09/2025?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_07", "query": "Số lượng nhân viên của PNJ tại ngày 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_08", "query": "Tiền và các khoản tương đương tiền của PNJ cuối kỳ là bao nhiêu?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_09", "query": "Hàng tồn kho của PNJ tại 30/09/2025 là bao nhiêu?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_10", "query": "Doanh thu thuần Quý III/2025 của PNJ là bao nhiêu?", "qa_type": "single_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_11", "query": "Tổng tài sản của PNJ thay đổi bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_12", "query": "Tiền và tương đương tiền của PNJ giảm bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_13", "query": "Hàng tồn kho của PNJ giảm bao nhiêu so với đầu năm?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_14", "query": "Tổng vay và nợ thuê tài chính của PNJ cuối kỳ là bao nhiêu?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_15", "query": "Doanh thu thuần Quý III/2025 của PNJ tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_16", "query": "Biên lợi nhuận gộp Quý III/2025 của PNJ xấp xỉ bao nhiêu?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_17", "query": "LNST Quý III/2025 của PNJ tăng bao nhiêu so với Quý III/2024?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_18", "query": "Lưu chuyển tiền thuần từ hoạt động kinh doanh trừ lưu chuyển tiền thuần từ đầu tư của PNJ cho kết quả bao nhiêu?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_19", "query": "Lãi cơ bản trên cổ phiếu lũy kế 9 tháng 2025 của PNJ tăng bao nhiêu so với 9 tháng 2024?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}
+{"id": "PNJ_2025_Q3_20", "query": "Số lượng nhân viên PNJ tại 30/09/2025 giảm bao nhiêu so với 31/12/2024?", "qa_type": "multi_hop", "ticker": "PNJ", "source_file": "PNJ-Q3.ocr_text.txt"}

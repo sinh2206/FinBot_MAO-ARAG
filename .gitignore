@@ -22,16 +22,35 @@ data/index/*
 data/embeddings/*
 data/metadata/*
 data/documents/cafef_news.jsonl
+data/raw_data/*
+data/processed_data/*
 !data/chunks/.gitkeep
 !data/index/.gitkeep
 !data/embeddings/.gitkeep
 !data/metadata/.gitkeep
+!data/raw_data/.gitkeep
+!data/processed_data/.gitkeep
 
 data/training/*
 !data/training/.gitkeep
 
-storage_rag/cafef_news/
-
+models/qwen/*
+models/phi/*
+models/llama/*
+models/minimax/*
+models/lfm2_rag/*
+models/lfm2_rag_lora/*
+models/embedder/*
+models/cross_encoder/*
+models/qwen_ppo/*
+!models/qwen/.gitkeep
+!models/phi/.gitkeep
+!models/minimax/.gitkeep
+!models/lfm2_rag/.gitkeep
+!models/lfm2_rag_lora/.gitkeep
+!models/embedder/.gitkeep
+!models/cross_encoder/.gitkeep
+!models/README.md
 
 *.log
 *.tmp

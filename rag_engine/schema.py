@@ -128,6 +128,11 @@ class WorkflowPlan:
         if not sub_queries:
             sub_queries = [SubQuery(id="q1", query=original_query)]
 
+        metadata = dict(value.get("metadata") or {})
+        for key in ("ticker", "qa_type", "selected_sources"):
+            if key in value and key not in metadata:
+                metadata[key] = value[key]
+
         return cls(
             original_query=original_query,
             sub_queries=sub_queries,
@@ -135,7 +140,7 @@ class WorkflowPlan:
             requires_retrieval=_coerce_bool(value.get("requires_retrieval", value.get("use_retriever")), True),
             requires_execution=_coerce_bool(value.get("requires_execution", value.get("use_executor")), True),
             aggregation_mode=str(value.get("aggregation_mode") or value.get("aggregation") or "concat"),
-            metadata=dict(value.get("metadata") or {}),
+            metadata=metadata,
         )
 
     def to_dict(self) -> dict[str, Any]:
