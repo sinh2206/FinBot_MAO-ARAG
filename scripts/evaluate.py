@@ -62,10 +62,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device_map", default="auto")
     parser.add_argument("--gpu_memory_limit", default=None)
     parser.add_argument("--enable_gemini_fallback", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--fallback_model_name", default=executor_eval.load_dotenv_value("GEMINI_MODEL_NAME", "gemini-3.5-flash"))
+    parser.add_argument("--fallback_model_name", default=executor_eval.load_dotenv_value("GEMINI_MODEL_NAME", "gemini-2.5-flash"))
     parser.add_argument("--fallback_api_key", default=executor_eval.load_dotenv_value("GEMINI_API_KEY", None))
     parser.add_argument("--fallback_temperature", type=float, default=0.0)
-    parser.add_argument("--fallback_max_output_tokens", type=int, default=256)
+    parser.add_argument("--fallback_max_output_tokens", type=int, default=int(executor_eval.load_dotenv_value("GEMINI_FALLBACK_MAX_OUTPUT_TOKENS", "64") or "64"))
+    parser.add_argument("--fallback_thinking_budget", type=int, default=int(executor_eval.load_dotenv_value("GEMINI_FALLBACK_THINKING_BUDGET", "0") or "0"))
+    parser.add_argument("--fallback_context_chars", type=int, default=int(executor_eval.load_dotenv_value("GEMINI_FALLBACK_CONTEXT_CHARS", "900") or "900"))
+    parser.add_argument("--fallback_max_snippets", type=int, default=int(executor_eval.load_dotenv_value("GEMINI_FALLBACK_MAX_SNIPPETS", "2") or "2"))
+    parser.add_argument("--fallback_max_snippet_chars", type=int, default=int(executor_eval.load_dotenv_value("GEMINI_FALLBACK_MAX_SNIPPET_CHARS", "220") or "220"))
+    parser.add_argument("--gemini_low_evidence_threshold", type=float, default=0.75)
     return parser.parse_args()
 
 
@@ -121,6 +126,10 @@ def main() -> None:
                 fallback_model_name=args.fallback_model_name,
                 fallback_temperature=args.fallback_temperature,
                 fallback_max_output_tokens=args.fallback_max_output_tokens,
+                fallback_thinking_budget=args.fallback_thinking_budget,
+                fallback_context_chars=args.fallback_context_chars,
+                fallback_max_snippets=args.fallback_max_snippets,
+                fallback_max_snippet_chars=args.fallback_max_snippet_chars,
             )
         )
 
@@ -135,13 +144,24 @@ def main() -> None:
         predicted_plan = planner_eval.extract_json(raw_plan)
         planner_scores = planner_eval.score_plan(predicted_plan, item)
         selected_sources = normalize_selected_sources(predicted_plan, available_sources)
+        if not selected_sources:
+            selected_sources = [item["source_file"]]
         source_docs, source_text = load_selected_sources(
             selected_sources=selected_sources,
             processed_dir=Path(args.processed_dir),
             chunk_map=chunk_map,
             text_cache=text_cache,
         )
-        planned_component_queries = build_plan_component_queries(predicted_plan, item)
+        reference_component_queries = executor_eval.build_component_queries(
+            query=item["query"],
+            qa_type=item["qa_type"],
+            ticker=item["ticker"],
+        )
+        planned_component_queries = build_plan_component_queries(
+            predicted_plan,
+            item,
+            reference_component_queries=reference_component_queries,
+        )
         component_results = executor_eval.evaluate_component_queries(
             component_queries=planned_component_queries,
             source_docs=source_docs,
@@ -153,6 +173,13 @@ def main() -> None:
             component_results,
             max_context_chars=args.max_context_chars,
         )
+        component_count_ok = planned_component_count_ok(item["qa_type"], component_results)
+        evidence_number_coverage = executor_eval.score_evidence_number_coverage(
+            ground_truth_context=str(reference.get("ground_truth_context") or ""),
+            component_results=component_results,
+            rel_tol=args.numeric_rel_tol,
+            percent_abs_tol=args.percent_abs_tol,
+        )
         executor_row = {
             "source_file": ", ".join(selected_sources) if selected_sources else "KHÔNG CHỌN ĐƯỢC NGUỒN",
             "ticker": item["ticker"],
@@ -161,11 +188,31 @@ def main() -> None:
             "context": context,
             "query": item["query"],
         }
-        prediction = executor_runner.answer(executor_row)
+        prediction = ""
         executor_used = "qwen"
-        if fallback_runner and executor_eval.is_not_found(prediction):
+        routing_reason = "default_qwen"
+        if fallback_runner and should_route_directly_to_gemini(
+            qa_type=item["qa_type"],
+            component_count_ok=component_count_ok,
+            evidence_number_coverage=evidence_number_coverage,
+            low_evidence_threshold=args.gemini_low_evidence_threshold,
+        ):
             prediction = fallback_runner.answer(executor_row)
             executor_used = "gemini"
+            routing_reason = "multi_hop_direct_gemini_synthesis"
+        else:
+            prediction = executor_runner.answer(executor_row)
+            if fallback_runner and should_fallback_to_gemini(
+                qa_type=item["qa_type"],
+                prediction=prediction,
+                answer=str(reference.get("ground_truth_answer") or ""),
+                component_count_ok=component_count_ok,
+                evidence_number_coverage=evidence_number_coverage,
+                low_evidence_threshold=args.gemini_low_evidence_threshold,
+            ):
+                prediction = fallback_runner.answer(executor_row)
+                executor_used = "gemini"
+                routing_reason = "fallback_after_qwen"
 
         answer_metrics = executor_eval.score_prediction(
             prediction=prediction,
@@ -177,7 +224,6 @@ def main() -> None:
             numeric_rel_tol=args.numeric_rel_tol,
             percent_abs_tol=args.percent_abs_tol,
         )
-        component_count_ok = planned_component_count_ok(item["qa_type"], component_results)
         retrieval_component_score = build_retrieval_component_score(
             component_results=component_results,
             component_support_rate=answer_metrics["component_support_rate"],
@@ -203,11 +249,7 @@ def main() -> None:
             "selected_sources": selected_sources,
             "planner_metrics": planner_scores,
             "planned_component_queries": planned_component_queries,
-            "reference_component_queries": executor_eval.build_component_queries(
-                query=item["query"],
-                qa_type=item["qa_type"],
-                ticker=item["ticker"],
-            ),
+            "reference_component_queries": reference_component_queries,
         }
         plans.append(plan_row)
 
@@ -221,10 +263,12 @@ def main() -> None:
             "reference_context": str(reference.get("ground_truth_context") or ""),
             "prediction": prediction,
             "executor_used": executor_used,
+            "executor_routing_reason": routing_reason,
             "selected_sources": selected_sources,
             "planner": plan_row,
             "component_results": component_results,
             "component_count_ok": component_count_ok,
+            "precomputed_evidence_number_coverage": evidence_number_coverage,
             "retrieval_component_score": retrieval_component_score,
             "end_to_end_score": end_to_end_score,
             **answer_metrics,
@@ -241,6 +285,7 @@ def main() -> None:
                     "executor_score": round(answer_metrics["executor_score"], 4),
                     "end_to_end_score": round(end_to_end_score, 4),
                     "executor_used": executor_used,
+                    "routing_reason": routing_reason,
                     "prediction": prediction[:160],
                 },
                 ensure_ascii=False,
@@ -318,13 +363,19 @@ def load_selected_sources(
     return docs, "\n\n".join(texts).strip()
 
 
-def build_plan_component_queries(plan: dict[str, Any] | None, item: dict[str, Any]) -> list[dict[str, Any]]:
+def build_plan_component_queries(
+    plan: dict[str, Any] | None,
+    item: dict[str, Any],
+    *,
+    reference_component_queries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     if not isinstance(plan, dict):
-        return []
+        return reference_component_queries
     raw = plan.get("sub_queries") or []
     if isinstance(raw, dict):
         raw = [raw]
     normalized = []
+    seen_ids: set[str] = set()
     for index, sub in enumerate(raw, start=1):
         if not isinstance(sub, dict):
             continue
@@ -332,15 +383,44 @@ def build_plan_component_queries(plan: dict[str, Any] | None, item: dict[str, An
         if not query:
             continue
         kind = normalize_subquery_type(sub)
+        sub_id = str(sub.get("id") or f"q{index}")
+        if sub_id in seen_ids:
+            sub_id = f"plan_{index}_{sub_id}"
+        seen_ids.add(sub_id)
         normalized.append(
             {
-                "id": str(sub.get("id") or f"q{index}"),
+                "id": sub_id,
                 "query": query,
                 "type": kind,
                 "required": kind in {"retrieval_qa", "retrieval"},
                 "depends_on": [str(value) for value in (sub.get("depends_on") or [])] if isinstance(sub.get("depends_on"), list) else [],
             }
         )
+    if item["qa_type"] != "multi_hop":
+        return normalized or reference_component_queries
+    retrieval_count = sum(1 for current in normalized if current["type"] in {"retrieval_qa", "retrieval"})
+    if retrieval_count >= 2:
+        return normalized
+    seen_queries = {executor_eval.normalize_answer(current["query"]) for current in normalized}
+    for candidate in reference_component_queries:
+        normalized_query = executor_eval.normalize_answer(candidate["query"])
+        if normalized_query in seen_queries:
+            continue
+        if candidate["type"] in {"retrieval_qa", "retrieval"}:
+            candidate_id = str(candidate["id"])
+            while candidate_id in seen_ids:
+                candidate_id = f"heuristic_{candidate_id}"
+            seen_ids.add(candidate_id)
+            normalized.append({**candidate, "id": candidate_id})
+            seen_queries.add(normalized_query)
+    if not any(current["type"] == "calculation" for current in normalized):
+        for candidate in reference_component_queries:
+            if candidate["type"] == "calculation":
+                candidate_id = str(candidate["id"])
+                while candidate_id in seen_ids:
+                    candidate_id = f"heuristic_{candidate_id}"
+                normalized.append({**candidate, "id": candidate_id})
+                break
     return normalized
 
 
@@ -370,6 +450,62 @@ def build_retrieval_component_score(
     if evidence_number_coverage is not None:
         values.append(evidence_number_coverage)
     return planner_eval.mean(values)
+
+
+def should_route_directly_to_gemini(
+    *,
+    qa_type: str,
+    component_count_ok: bool,
+    evidence_number_coverage: float | None,
+    low_evidence_threshold: float,
+) -> bool:
+    if qa_type != "multi_hop":
+        return False
+    if not component_count_ok:
+        return False
+    if evidence_number_coverage is None:
+        return True
+    return evidence_number_coverage >= low_evidence_threshold
+
+
+def should_fallback_to_gemini(
+    *,
+    qa_type: str,
+    prediction: str,
+    answer: str,
+    component_count_ok: bool,
+    evidence_number_coverage: float | None,
+    low_evidence_threshold: float,
+) -> bool:
+    if executor_eval.is_not_found(prediction):
+        return True
+    if qa_type != "multi_hop":
+        return False
+    if not component_count_ok:
+        return True
+    if evidence_number_coverage is not None and evidence_number_coverage < low_evidence_threshold:
+        return True
+    if clearly_bad_answer_format(prediction=prediction, answer=answer):
+        return True
+    return False
+
+
+def clearly_bad_answer_format(*, prediction: str, answer: str) -> bool:
+    prediction_normalized = executor_eval.normalize_answer(prediction)
+    answer_normalized = executor_eval.normalize_answer(answer)
+    prediction_numbers = executor_eval.extract_numbers(prediction)
+    answer_numbers = executor_eval.extract_numbers(answer)
+    if answer_numbers and not prediction_numbers:
+        return True
+    if " va " in answer_normalized and len(answer_numbers) >= 2 and len(prediction_numbers) < 2:
+        return True
+    if "%" in answer and "%" not in prediction:
+        return True
+    if "cổ phiếu" in answer.lower() and "cổ phiếu" not in prediction.lower():
+        return True
+    if "nhân viên" in answer.lower() and not any(token in prediction.lower() for token in ("nhân viên", "người")):
+        return True
+    return False
 
 
 def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:

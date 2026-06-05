@@ -4,21 +4,84 @@ services:
       context: .
       dockerfile: Dockerfile
     image: vn-stock-mao-arag:latest
-    container_name: vn-stock-mao-arag
+    container_name: vn-stock-mao-arag-app
+    working_dir: /app
     env_file:
       - .env
     environment:
-      ENABLE_GEMINI_API: "false"
-      STREAMLIT_SERVER_HEADLESS: "true"
-      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+      PYTHONPATH: /app
+      HF_HOME: /app/.cache/huggingface
+      TOKENIZERS_PARALLELISM: "false"
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+    command: ["python", "main.py"]
     ports:
-      - "8501:8501"
-    # Uncomment on Linux servers with NVIDIA Container Toolkit when running local LLMs.
-    # gpus: all
+      - "8000:8000"
     volumes:
-      - ./data:/app/data
-      - ./storage_rag:/app/storage_rag
-      - ./models:/app/models
-      - ./reports:/app/reports
-      - ./cafef_news_:/app/cafef_news_:ro
+      - ./:/app
+      - huggingface-cache:/app/.cache/huggingface
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # Nếu host có NVIDIA Container Toolkit và bạn muốn chạy model local bằng GPU,
+    # bỏ comment phần dưới:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vn-stock-mao-arag:latest
+    container_name: vn-stock-mao-arag-runner
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+      HF_HOME: /app/.cache/huggingface
+      TOKENIZERS_PARALLELISM: "false"
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+    command: ["bash", "-lc", "sleep infinity"]
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/app
+      - huggingface-cache:/app/.cache/huggingface
+    restart: unless-stopped
+    # Nếu host có NVIDIA Container Toolkit và bạn muốn chạy model local bằng GPU,
+    # bỏ comment phần dưới:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  frontend:
+    image: python:3.11-slim-bookworm
+    container_name: vn-stock-mao-arag-frontend
+    working_dir: /app
+    command: ["python", "-m", "http.server", "8080", "-d", "frontend"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app/frontend:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    profiles: ["frontend"]
+
+volumes:
+  huggingface-cache:

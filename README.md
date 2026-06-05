@@ -540,18 +540,127 @@ Kết luận nhanh:
   - planner có tách được câu hỏi thành phần, gắn đúng `source_file`;
   - executor có trả lời đúng đáp án cuối khi so với `reference_answers.json`.
 
-## 9. Frontend chat
+## 9. Chạy bằng Docker
 
-Frontend tĩnh nằm ở:
+Repo hiện tại phù hợp với Docker theo 2 service:
 
-- `frontend/index.html`
-- `frontend/style.css`
-- `frontend/script.js`
+- `runner`: container để chạy các script như build index, fine-tune, evaluate
+- `frontend`: container serve `frontend/` tĩnh qua `python -m http.server`
 
-Mở trực tiếp file HTML hoặc serve bằng Python:
+### 9.1. Build image
 
 ```bash
-python -m http.server 8080 -d frontend
+docker compose build
+```
+
+### 9.2. Khởi động container runner
+
+```bash
+docker compose up -d runner
+```
+
+Vào shell trong container:
+
+```bash
+docker compose exec runner bash
+```
+
+Từ đây có thể chạy toàn bộ script của dự án, ví dụ:
+
+```bash
+python scripts/build_index.py \
+  --data_dir data/processed_data \
+  --embedding_model models/embedder \
+  --planner_model models/phi \
+  --primary_executor_model models/qwen \
+  --fallback_executor_model gemini-2.5-flash \
+  --retrieval_mode hybrid \
+  --chunk_dir data/chunks \
+  --index_dir data/index \
+  --embedding_dir data/embeddings \
+  --metadata_dir data/metadata \
+  --local_files_only
+```
+
+Hoặc:
+
+```bash
+python scripts/evaluate.py \
+  --planner_model_name_or_path models/phi \
+  --planner_adapter_path models/phi_planner_lora \
+  --executor_model_name_or_path models/qwen \
+  --executor_adapter_path models/qwen_executor_lora \
+  --processed_dir data/processed_data \
+  --chunks_file data/chunks/chunks.json \
+  --questions data/test/questions.json \
+  --answers data/test/reference_answers.json \
+  --qa_type_filter multi_hop \
+  --enable_gemini_fallback \
+  --local_files_only
+```
+
+### 9.3. Chạy lệnh một lần không cần vào shell
+
+Ví dụ build index:
+
+```bash
+docker compose run --rm runner \
+  python scripts/build_index.py \
+  --data_dir data/processed_data \
+  --embedding_model models/embedder \
+  --planner_model models/phi \
+  --primary_executor_model models/qwen \
+  --fallback_executor_model gemini-2.5-flash \
+  --retrieval_mode hybrid \
+  --chunk_dir data/chunks \
+  --index_dir data/index \
+  --embedding_dir data/embeddings \
+  --metadata_dir data/metadata \
+  --local_files_only
+```
+
+Ví dụ evaluate end-to-end:
+
+```bash
+docker compose run --rm runner \
+  python scripts/evaluate.py \
+  --planner_model_name_or_path models/phi \
+  --planner_adapter_path models/phi_planner_lora \
+  --executor_model_name_or_path models/qwen \
+  --executor_adapter_path models/qwen_executor_lora \
+  --processed_dir data/processed_data \
+  --chunks_file data/chunks/chunks.json \
+  --questions data/test/questions.json \
+  --answers data/test/reference_answers.json \
+  --qa_type_filter multi_hop \
+  --enable_gemini_fallback \
+  --local_files_only
+```
+
+### 9.4. Chạy backend chat bằng Docker
+
+Backend hiện nằm trong `main.py`, tự serve luôn `frontend/` và các API:
+
+- `GET /healthz`
+- `GET /api/config`
+- `POST /api/chat`
+
+Chạy service backend:
+
+```bash
+docker compose up -d app
+```
+
+Mở:
+
+```text
+http://localhost:8000
+```
+
+### 9.5. Chạy frontend tĩnh bằng Docker
+
+```bash
+docker compose --profile frontend up -d frontend
 ```
 
 Mở:
@@ -560,9 +669,52 @@ Mở:
 http://localhost:8080
 ```
 
-Mặc định frontend gọi API backend tại `/api/chat`. Nếu backend của bạn chạy endpoint khác, sửa `API_ENDPOINT` trong `frontend/script.js`.
+Khi mở bản tĩnh ở cổng `8080`, `frontend/script.js` sẽ tự gọi backend ở `http://localhost:8000`.
 
-## 10. File này dùng để làm gì?
+### 9.6. Dừng container
+
+```bash
+docker compose down
+```
+
+Nếu muốn xóa luôn volume cache Hugging Face:
+
+```bash
+docker compose down -v
+```
+
+### 9.7. Ghi chú vận hành
+
+- `app` là service backend chính để kết nối frontend với pipeline `Phi -> Qwen -> Gemini fallback`.
+- `runner` mount toàn bộ repo vào `/app`, nên file sinh ra trong container sẽ hiện ngay ở máy host.
+- cache Hugging Face được giữ trong volume `huggingface-cache`, giúp không phải tải lại model mỗi lần.
+- nếu host có NVIDIA Container Toolkit và muốn dùng GPU cho model local, mở comment phần `deploy.resources.reservations.devices` trong `docker-compose.yml`.
+- Dockerfile hiện không chạy `streamlit`; backend chat dùng `main.py` và tự serve luôn `frontend/`.
+
+## 10. Frontend chat
+
+Frontend nằm ở:
+
+- `frontend/index.html`
+- `frontend/style.css`
+- `frontend/script.js`
+- `main.py`
+
+Chạy local đầy đủ:
+
+```bash
+python main.py
+```
+
+Mở:
+
+```text
+http://localhost:8000
+```
+
+`main.py` sẽ serve luôn `index.html`, `style.css`, `script.js` và API `/api/chat`. Nếu backend của bạn chạy endpoint khác, sửa `API_ENDPOINT` trong `frontend/script.js`.
+
+## 11. File này dùng để làm gì?
 
 - `tools/evaluation.py`: thư viện metric dùng chung, gồm `normalize_answer`, `exact_match`, `f1_score`.
 - `scripts/fine-tune.py`: fine-tune Qwen executor local.
@@ -571,7 +723,7 @@ Mặc định frontend gọi API backend tại `/api/chat`. Nếu backend của 
 - `scripts/evaluate_planner.py`: đánh giá riêng planner Phi.
 - `scripts/evaluate.py`: pipeline end-to-end chính cho kiến trúc `Phi -> Qwen -> Gemini fallback`.
 
-## 11. Lỗi thường gặp
+## 12. Lỗi thường gặp
 
 ### Gemini API key lỗi
 

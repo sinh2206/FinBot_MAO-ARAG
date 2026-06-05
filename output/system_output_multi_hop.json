@@ -1,6 +1,6 @@
 {
   "project": "vn_stock_mao_arag",
-  "generated_at": "2026-06-05T08:03:28.509919+00:00",
+  "generated_at": "2026-06-05T08:57:31.020793+00:00",
   "architecture": "Phi planner -> Qwen executor -> Gemini fallback",
   "evaluation_basis": {
     "questions": "data/test/questions.json",
@@ -29,40 +29,40 @@
     "planner_source_accuracy": 1.0,
     "planner_qa_type_accuracy": 1.0,
     "exact_match": 0.0,
-    "f1": 0.027900498675393487,
+    "f1": 0.08585858585858586,
     "numeric_accuracy": 0.16666666666666666,
     "groundedness": 0.08333333333333333,
-    "executor_score": 0.06253681626928471,
+    "executor_score": 0.07992424242424241,
     "component_support_rate": 1.0,
-    "evidence_number_coverage": 0.6375000000000001,
-    "component_count_ok_rate": 0.0,
-    "retrieval_component_score": 0.5458333333333333,
-    "end_to_end_score": 0.420846219027583,
-    "fallback_usage_rate": 0.4166666666666667,
+    "evidence_number_coverage": 0.7236111111111111,
+    "component_count_ok_rate": 1.0,
+    "retrieval_component_score": 0.9078703703703704,
+    "end_to_end_score": 0.5174410774410775,
+    "fallback_usage_rate": 1.0,
     "by_qa_type": {
       "multi_hop": {
         "count": 12,
         "planner_score": 1.0,
         "exact_match": 0.0,
-        "f1": 0.027900498675393487,
+        "f1": 0.08585858585858586,
         "numeric_accuracy": 0.16666666666666666,
         "groundedness": 0.08333333333333333,
-        "executor_score": 0.06253681626928471,
+        "executor_score": 0.07992424242424241,
         "component_support_rate": 1.0,
-        "evidence_number_coverage": 0.6375000000000001,
-        "component_count_ok_rate": 0.0,
-        "retrieval_component_score": 0.5458333333333333,
-        "end_to_end_score": 0.420846219027583,
-        "fallback_usage_rate": 0.4166666666666667
+        "evidence_number_coverage": 0.7236111111111111,
+        "component_count_ok_rate": 1.0,
+        "retrieval_component_score": 0.9078703703703704,
+        "end_to_end_score": 0.5174410774410775,
+        "fallback_usage_rate": 1.0
       }
     },
     "failure_summary": {
       "planner_invalid_json": 0,
       "planner_wrong_source": 0,
-      "multi_hop_missing_components": 12,
+      "multi_hop_missing_components": 0,
       "multi_hop_component_not_grounded": 0,
-      "executor_not_found": 5,
-      "gemini_fallback_used": 5
+      "executor_not_found": 9,
+      "gemini_fallback_used": 12
     }
   },
   "predictions": [
@@ -79,12 +79,12 @@
         "BFC-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.5,
-      "retrieval_component_score": 0.5,
+      "retrieval_component_score": 0.8333333333333334,
       "executor_score": 0.0,
-      "end_to_end_score": 0.375
+      "end_to_end_score": 0.45833333333333337
     },
     {
       "index": 2,
@@ -93,18 +93,18 @@
       "ticker": "BFC",
       "query": "Hai mảng báo cáo bộ phận của BFC đóng góp doanh thu thuần 9 tháng 2025 bao nhiêu?",
       "reference_answer": "6.511.382.819.394 VND và 1.636.979.108.965 VND",
-      "prediction": "Doanh thu thuần 9 tháng 2025 của hai mảng báo cáo bộ phận của BFC là 8.148.361.928.359 VND.",
-      "executor_used": "qwen",
+      "prediction": "Nội địa: 6.511.382.819.394, Xuất khẩu: 1.636.979.108.965",
+      "executor_used": "gemini",
       "selected_sources": [
         "BFC-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 1.0,
-      "retrieval_component_score": 0.6666666666666666,
-      "executor_score": 0.1760869565217391,
-      "end_to_end_score": 0.6282971014492753
+      "retrieval_component_score": 1.0,
+      "executor_score": 0.509090909090909,
+      "end_to_end_score": 0.8281818181818182
     },
     {
       "index": 3,
@@ -119,12 +119,12 @@
         "DPG-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.6666666666666666,
-      "retrieval_component_score": 0.5555555555555555,
+      "retrieval_component_score": 0.8888888888888888,
       "executor_score": 0.0,
-      "end_to_end_score": 0.38888888888888884
+      "end_to_end_score": 0.4722222222222222
     },
     {
       "index": 4,
@@ -133,18 +133,18 @@
       "ticker": "DPG",
       "query": "Vốn cổ phiếu phổ thông có quyền biểu quyết của DPG tăng bao nhiêu so với đầu năm?",
       "reference_answer": "377.994.780.000 VND",
-      "prediction": "Vốn cổ phiếu phổ thông có quyền biểu quyết của DPG tăng 378.000.000.000 đồng so với đầu năm.",
-      "executor_used": "qwen",
+      "prediction": "377.994.780.000",
+      "executor_used": "gemini",
       "selected_sources": [
         "DPG-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 1.0,
-      "retrieval_component_score": 0.6666666666666666,
-      "executor_score": 0.25,
-      "end_to_end_score": 0.5041666666666667
+      "retrieval_component_score": 1.0,
+      "executor_score": 0.44999999999999996,
+      "end_to_end_score": 0.6575
     },
     {
       "index": 5,
@@ -153,18 +153,18 @@
       "ticker": "DPM",
       "query": "LNST công ty mẹ lũy kế 9 tháng 2025 của DPM tăng bao nhiêu so với 9 tháng 2024?",
       "reference_answer": "286.471.725.373 VND",
-      "prediction": "Lợi nhuận sau thuế của công ty mẹ lũy kế 9 tháng 2025 của DPM là 236,000,000,000 VND, tăng 132,000,000,000 VND so với 104,000,000,000 VND của cùng kỳ 2024.",
-      "executor_used": "qwen",
+      "prediction": "434,787,906,522",
+      "executor_used": "gemini",
       "selected_sources": [
         "DPM-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.6666666666666666,
-      "retrieval_component_score": 0.5555555555555555,
-      "executor_score": 0.019354838709677417,
-      "end_to_end_score": 0.39566308243727594
+      "retrieval_component_score": 0.8888888888888888,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.4722222222222222
     },
     {
       "index": 6,
@@ -173,18 +173,18 @@
       "ticker": "DPM",
       "query": "Lưu chuyển tiền thuần từ hoạt động kinh doanh của DPM giảm bao nhiêu so với cùng kỳ?",
       "reference_answer": "2.135.226.032.114 VND",
-      "prediction": "Lưu chuyển tiền thuần từ hoạt động kinh doanh của DPM giảm 2,135,226,032,116 đồng so với cùng kỳ.",
-      "executor_used": "qwen",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
       "selected_sources": [
         "DPM-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.6666666666666666,
-      "retrieval_component_score": 0.5555555555555555,
-      "executor_score": 0.25,
-      "end_to_end_score": 0.47638888888888886
+      "retrieval_component_score": 0.8888888888888888,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.4722222222222222
     },
     {
       "index": 7,
@@ -199,12 +199,12 @@
         "HVN-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
-      "evidence_number_coverage": 0.4,
-      "retrieval_component_score": 0.4666666666666666,
+      "evidence_number_coverage": 0.6,
+      "retrieval_component_score": 0.8666666666666667,
       "executor_score": 0.0,
-      "end_to_end_score": 0.36666666666666664
+      "end_to_end_score": 0.4666666666666667
     },
     {
       "index": 8,
@@ -219,12 +219,12 @@
         "HVN-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.6666666666666666,
-      "retrieval_component_score": 0.5555555555555555,
+      "retrieval_component_score": 0.8888888888888888,
       "executor_score": 0.0,
-      "end_to_end_score": 0.38888888888888884
+      "end_to_end_score": 0.4722222222222222
     },
     {
       "index": 9,
@@ -233,18 +233,18 @@
       "ticker": "PNJ",
       "query": "Lãi cơ bản trên cổ phiếu lũy kế 9 tháng 2025 của PNJ tăng bao nhiêu so với 9 tháng 2024?",
       "reference_answer": "602 VND/cổ phiếu",
-      "prediction": "Lãi cơ bản trên cổ phiếu lũy kế 9 tháng 2025 của PNJ tăng 239.487.501.634 VND so với 9 tháng 2024.",
-      "executor_used": "qwen",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
       "selected_sources": [
         "PNJ-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
-      "evidence_number_coverage": 0.3333333333333333,
-      "retrieval_component_score": 0.4444444444444444,
-      "executor_score": 0.024999999999999998,
-      "end_to_end_score": 0.3698611111111111
+      "evidence_number_coverage": 0.6666666666666666,
+      "retrieval_component_score": 0.8888888888888888,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.4722222222222222
     },
     {
       "index": 10,
@@ -259,12 +259,12 @@
         "PNJ-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.75,
-      "retrieval_component_score": 0.5833333333333334,
+      "retrieval_component_score": 0.9166666666666666,
       "executor_score": 0.0,
-      "end_to_end_score": 0.39583333333333337
+      "end_to_end_score": 0.47916666666666663
     },
     {
       "index": 11,
@@ -273,18 +273,18 @@
       "ticker": "REE",
       "query": "LNST công ty mẹ Quý III/2025 chiếm khoảng bao nhiêu phần trăm lũy kế 9 tháng của REE?",
       "reference_answer": "35,32%",
-      "prediction": "LNST công ty mẹ Quý III/2025 chiếm khoảng 8.1% lũy kế 9 tháng của REE.",
-      "executor_used": "qwen",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
       "selected_sources": [
         "REE-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
-      "evidence_number_coverage": 0.5,
-      "retrieval_component_score": 0.5,
+      "evidence_number_coverage": 1.0,
+      "retrieval_component_score": 1.0,
       "executor_score": 0.0,
-      "end_to_end_score": 0.375
+      "end_to_end_score": 0.5
     },
     {
       "index": 12,
@@ -293,18 +293,18 @@
       "ticker": "REE",
       "query": "Lãi cơ bản trên cổ phiếu Quý III/2025 của REE tăng bao nhiêu điểm so với Quý III/2024?",
       "reference_answer": "359 VND/cổ phiếu",
-      "prediction": "Lãi cơ bản trên cổ phiếu Quý III/2025 của REE tăng 2.056.199.554 VND so với Quý III/2024.",
-      "executor_used": "qwen",
+      "prediction": "KHÔNG TÌM THẤY",
+      "executor_used": "gemini",
       "selected_sources": [
         "REE-Q3.ocr_text.txt"
       ],
       "planner_score": 1.0,
-      "component_count_ok": false,
+      "component_count_ok": true,
       "component_support_rate": 1.0,
       "evidence_number_coverage": 0.5,
-      "retrieval_component_score": 0.5,
-      "executor_score": 0.03,
-      "end_to_end_score": 0.3855
+      "retrieval_component_score": 0.8333333333333334,
+      "executor_score": 0.0,
+      "end_to_end_score": 0.45833333333333337
     }
   ]
 }

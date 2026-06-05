@@ -58,10 +58,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device_map", default="auto")
     parser.add_argument("--gpu_memory_limit", default=None)
     parser.add_argument("--enable_gemini_fallback", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--fallback_model_name", default=load_dotenv_value("GEMINI_MODEL_NAME", "gemini-3.5-flash"))
+    parser.add_argument("--fallback_model_name", default=load_dotenv_value("GEMINI_MODEL_NAME", "gemini-2.5-flash"))
     parser.add_argument("--fallback_api_key", default=load_dotenv_value("GEMINI_API_KEY", None))
     parser.add_argument("--fallback_temperature", type=float, default=0.0)
-    parser.add_argument("--fallback_max_output_tokens", type=int, default=256)
+    parser.add_argument("--fallback_max_output_tokens", type=int, default=int(load_dotenv_value("GEMINI_FALLBACK_MAX_OUTPUT_TOKENS", "64") or "64"))
+    parser.add_argument("--fallback_thinking_budget", type=int, default=int(load_dotenv_value("GEMINI_FALLBACK_THINKING_BUDGET", "0") or "0"))
+    parser.add_argument("--fallback_context_chars", type=int, default=int(load_dotenv_value("GEMINI_FALLBACK_CONTEXT_CHARS", "900") or "900"))
+    parser.add_argument("--fallback_max_snippets", type=int, default=int(load_dotenv_value("GEMINI_FALLBACK_MAX_SNIPPETS", "2") or "2"))
+    parser.add_argument("--fallback_max_snippet_chars", type=int, default=int(load_dotenv_value("GEMINI_FALLBACK_MAX_SNIPPET_CHARS", "220") or "220"))
     return parser.parse_args()
 
 
@@ -222,22 +226,23 @@ class GeminiFallbackRunner:
         self.model_name = args.fallback_model_name
         self.temperature = args.fallback_temperature
         self.max_output_tokens = args.fallback_max_output_tokens
+        self.thinking_budget = args.fallback_thinking_budget
+        self.max_context_chars = args.fallback_context_chars
+        self.max_snippets = args.fallback_max_snippets
+        self.max_snippet_chars = args.fallback_max_snippet_chars
 
     def answer(self, row: dict[str, Any]) -> str:
-        component_block = format_component_block(row["component_results"])
-        user_prompt = (
-            f"Tài liệu nguồn: {row['source_file']}\n"
-            f"Mã cổ phiếu: {row['ticker']}\n"
-            f"Loại câu hỏi: {row['qa_type']}\n\n"
-            f"<sub_queries>\n{component_block}\n</sub_queries>\n\n"
-            f"<context>\n{row['context']}\n</context>\n\n"
-            f"Câu hỏi cuối cùng: {row['query']}\n"
-            "Chỉ trả lời đáp án cuối cùng, ngắn gọn. Không chép lại bảng."
+        user_prompt = build_gemini_fallback_prompt(
+            row=row,
+            max_context_chars=self.max_context_chars,
+            max_snippets=self.max_snippets,
+            max_snippet_chars=self.max_snippet_chars,
         )
         config = self.types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=build_gemini_fallback_system_prompt(),
             temperature=self.temperature,
             max_output_tokens=self.max_output_tokens,
+            thinking_config=self.types.ThinkingConfig(thinking_budget=self.thinking_budget),
         )
         response = self.client.models.generate_content(
             model=self.model_name,
@@ -599,6 +604,67 @@ def format_component_block(component_results: list[dict[str, Any]]) -> str:
         for evidence in item.get("evidence_snippets") or []:
             lines.append(f"- {evidence['snippet']}")
     return "\n".join(lines).strip()
+
+
+def build_gemini_fallback_system_prompt() -> str:
+    return (
+        "Bạn là Gemini fallback cực ngắn cho hệ thống RAG báo cáo tài chính chứng khoán Việt Nam. "
+        "Chỉ dùng dữ liệu trong <sub_queries> và <context>. "
+        "Nhiệm vụ của bạn chỉ là tổng hợp đáp án cuối cùng khi Qwen không trả lời được. "
+        "Nếu chưa đủ căn cứ, trả lời đúng: KHÔNG TÌM THẤY. "
+        "Chỉ trả lời 1 dòng, không giải thích, không nhắc lại câu hỏi, giữ nguyên đơn vị. "
+        "Nếu câu hỏi hỏi hai giá trị, trả về cả hai giá trị, không cộng."
+    )
+
+
+def build_gemini_fallback_prompt(
+    *,
+    row: dict[str, Any],
+    max_context_chars: int,
+    max_snippets: int,
+    max_snippet_chars: int,
+) -> str:
+    component_block = format_component_block_for_gemini(
+        row.get("component_results") or [],
+        max_snippets=max_snippets,
+        max_snippet_chars=max_snippet_chars,
+    )
+    compact_context = compact_text(str(row.get("context") or ""), max_context_chars)
+    return (
+        f"Tài liệu nguồn: {row['source_file']}\n"
+        f"Mã cổ phiếu: {row['ticker']}\n"
+        f"Loại câu hỏi: {row['qa_type']}\n\n"
+        f"<sub_queries>\n{component_block}\n</sub_queries>\n\n"
+        f"<context>\n{compact_context}\n</context>\n\n"
+        f"Câu hỏi cuối cùng: {row['query']}\n"
+        "Trả lời đúng 1 dòng với đáp án cuối cùng."
+    )
+
+
+def format_component_block_for_gemini(
+    component_results: list[dict[str, Any]],
+    *,
+    max_snippets: int,
+    max_snippet_chars: int,
+) -> str:
+    lines: list[str] = []
+    for item in component_results:
+        query_type = str(item.get("type") or "")
+        if query_type not in {"retrieval_qa", "retrieval"}:
+            continue
+        status = "supported" if item.get("supported") else "missing"
+        lines.append(f"[{item['id']}] ({status}) {item['query']}")
+        snippets = item.get("evidence_snippets") or []
+        for evidence in snippets[:max_snippets]:
+            lines.append(f"- {compact_text(str(evidence.get('snippet') or ''), max_snippet_chars)}")
+    return "\n".join(lines).strip()
+
+
+def compact_text(text: str, max_chars: int) -> str:
+    value = re.sub(r"\s+", " ", text).strip()
+    if max_chars <= 0 or len(value) <= max_chars:
+        return value
+    return value[:max_chars].rstrip()
 
 
 def score_prediction(

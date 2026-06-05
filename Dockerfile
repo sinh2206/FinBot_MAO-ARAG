@@ -3,9 +3,10 @@ FROM python:3.11-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app \
-    STREAMLIT_SERVER_HEADLESS=true \
-    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    HF_HOME=/app/.cache/huggingface \
+    MPLCONFIGDIR=/tmp/matplotlib
 
 WORKDIR /app
 
@@ -13,21 +14,28 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         antiword \
         build-essential \
+        ca-certificates \
+        curl \
+        git \
         libgomp1 \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1 \
+        poppler-utils \
         tesseract-ocr \
         tesseract-ocr-eng \
         tesseract-ocr-vie \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN python -m pip install --upgrade pip wheel setuptools \
-    && pip install -r requirements.txt
+COPY requirements.txt /tmp/requirements.txt
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && pip install -r /tmp/requirements.txt
 
-COPY . .
+COPY . /app
 
-EXPOSE 8501
+RUN mkdir -p /app/.cache/huggingface /app/data /app/models /app/output /app/reports
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3).read()" || exit 1
+EXPOSE 8000
 
-CMD ["streamlit", "run", "main.py", "--server.address", "0.0.0.0", "--server.port", "8501", "--server.headless", "true"]
+CMD ["python", "main.py"]

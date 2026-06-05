@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
     default_embedding_model = load_dotenv_value("EMBEDDING_MODEL_NAME", "models/embedder")
     default_planner_model = load_dotenv_value("PHI_MODEL_NAME", load_dotenv_value("PLANNER_MODEL_NAME", "models/phi"))
     default_primary_executor = load_dotenv_value("EXECUTOR_MODEL_NAME", "models/qwen")
-    default_fallback_executor = load_dotenv_value("GEMINI_MODEL_NAME", "gemini-3.5-flash")
+    default_fallback_executor = load_dotenv_value("GEMINI_MODEL_NAME", "gemini-2.5-flash")
     parser.add_argument(
         "--data_dir",
         default="data/processed_data",
