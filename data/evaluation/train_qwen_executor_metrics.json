@@ -1,0 +1,35 @@
+{
+  "count": 96,
+  "exact_match": 0.041666666666666664,
+  "f1": 0.19846834345719164,
+  "numeric_accuracy": 0.1506849315068493,
+  "groundedness": 0.3125,
+  "executor_score": 0.20745716970382413,
+  "component_support_rate": 1.0,
+  "all_components_supported_rate": 1.0,
+  "evidence_number_coverage": 0.3684027777777778,
+  "by_qa_type": {
+    "multi_hop": {
+      "count": 48,
+      "exact_match": 0.0,
+      "f1": 0.07505875463748977,
+      "numeric_accuracy": 0.0851063829787234,
+      "groundedness": 0.20833333333333334,
+      "executor_score": 0.0798092930579136,
+      "component_support_rate": 1.0,
+      "all_components_supported_rate": 1.0,
+      "evidence_number_coverage": 0.3684027777777778
+    },
+    "single_hop": {
+      "count": 48,
+      "exact_match": 0.08333333333333333,
+      "f1": 0.3218779322768935,
+      "numeric_accuracy": 0.2692307692307692,
+      "groundedness": 0.4166666666666667,
+      "executor_score": 0.33510504634973476,
+      "component_support_rate": null,
+      "all_components_supported_rate": null,
+      "evidence_number_coverage": null
+    }
+  }
+}

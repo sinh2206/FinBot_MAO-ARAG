@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VN Stock MAO ARAG</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Thanh điều hướng">
+      <div class="brand">
+        <div class="brand-mark">VN</div>
+        <div>
+          <h1>Stock RAG</h1>
+          <p>Phi planner · Qwen executor · Gemini fallback</p>
+        </div>
+      </div>
+      <button id="newChat" class="new-chat" type="button">+ Cuộc trò chuyện mới</button>
+      <div class="sidebar-section">
+        <span class="section-label">Gợi ý</span>
+        <button class="prompt-chip" type="button">Doanh thu thuần Quý III/2025 của BFC?</button>
+        <button class="prompt-chip" type="button">Vốn góp của chủ sở hữu PNJ cuối kỳ?</button>
+        <button class="prompt-chip" type="button">So sánh lợi nhuận sau thuế giữa hai kỳ</button>
+      </div>
+      <div class="sidebar-footer">
+        <span class="status-dot"></span>
+        <span>API endpoint: <code>/api/chat</code></span>
+      </div>
+    </aside>
+
+    <main class="chat-panel">
+      <header class="topbar">
+        <div>
+          <h2>Hỏi đáp báo cáo tài chính</h2>
+          <p>Planner dùng Phi local, executor dùng Qwen local; Gemini chỉ là phương án dự phòng.</p>
+        </div>
+        <button id="clearChat" class="ghost-button" type="button">Xóa</button>
+      </header>
+
+      <section id="messages" class="messages" aria-live="polite"></section>
+
+      <form id="chatForm" class="composer">
+        <textarea id="messageInput" rows="1" placeholder="Nhập câu hỏi về báo cáo tài chính..." autocomplete="off"></textarea>
+        <button id="sendButton" type="submit" aria-label="Gửi câu hỏi">Gửi</button>
+      </form>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

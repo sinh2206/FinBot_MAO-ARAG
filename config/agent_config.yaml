@@ -1,16 +1,27 @@
 planner:
-  model_name: "Qwen/Qwen2.5-7B-Instruct"
-  quantize: "4bit"
-  max_new_tokens: 512
+  provider: "local"
+  model_name: "models/phi"
+  repo_id: "microsoft/Phi-4-mini-instruct"
+  max_new_tokens: 256
   temperature: 0.1
   local_files_only: true
 
 executor:
-  model_name: "LiquidAI/LFM2-1.2B-RAG"
-  quantize: "4bit"
-  max_new_tokens: 128
-  temperature: 0.0
-  local_files_only: true
+  primary:
+    provider: "local"
+    model_name: "models/qwen"
+    repo_id: "Qwen/Qwen2.5-7B-Instruct"
+    quantize: "4bit"
+    max_new_tokens: 256
+    temperature: 0.0
+    local_files_only: true
+  fallback:
+    provider: "gemini"
+    model_name: "gemini-2.5-flash"
+    api_key_env: "GEMINI_API_KEY"
+    max_new_tokens: 256
+    temperature: 0.0
+    trigger: "qwen_empty_or_not_found"
 
 retriever:
   top_k: 10
@@ -24,10 +35,11 @@ retriever:
   index_dir: "data/index"
 
 reranker:
-  model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  model_name: "models/cross_encoder"
   top_k: 5
   batch_size: 16
 
 aggregator:
   mode: "template"
-  use_executor_for_synthesis: false
+  use_executor_for_synthesis: true
+  executor_fallback_policy: "qwen_then_gemini"

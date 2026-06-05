@@ -1,0 +1,9 @@
+{
+  "count": 24,
+  "json_valid": 1.0,
+  "source_accuracy": 1.0,
+  "qa_type_accuracy": 1.0,
+  "ticker_accuracy": 1.0,
+  "subquery_present": 1.0,
+  "planner_score": 1.0
+}

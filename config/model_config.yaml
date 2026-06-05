@@ -1,17 +1,26 @@
 models:
   planner:
+    provider: "local"
+    repo_id: "microsoft/Phi-4-mini-instruct"
+    local_dir: "models/phi"
+    quantize: "4bit"
+    device_map: "auto"
+    local_files_only: true
+
+  executor_primary:
+    provider: "local"
     repo_id: "Qwen/Qwen2.5-7B-Instruct"
     local_dir: "models/qwen"
     quantize: "4bit"
     device_map: "auto"
     local_files_only: true
 
-  executor:
-    repo_id: "LiquidAI/LFM2-1.2B-RAG"
-    local_dir: "models/lfm2_rag"
-    quantize: "4bit"
-    device_map: "auto"
-    local_files_only: true
+  executor_fallback:
+    provider: "gemini"
+    model_name: "gemini-2.5-flash"
+    api_key_env: "GEMINI_API_KEY"
+    temperature: 0.0
+    max_output_tokens: 256
 
   embedder:
     repo_id: "sentence-transformers/all-MiniLM-L6-v2"

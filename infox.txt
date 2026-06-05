@@ -1,0 +1,344 @@
+Dự án: VN Stock MAO ARAG
+Mục đích: hệ thống RAG/agent để hỏi đáp báo cáo tài chính chứng khoán Việt Nam.
+
+========================================
+1. Tổng quan kiến trúc
+========================================
+
+- Planner local: `microsoft/Phi-4-mini-instruct`
+  Dùng để đọc câu hỏi, chọn tài liệu nguồn và sinh JSON plan truy xuất.
+
+- Executor chính local: `Qwen/Qwen2.5-7B-Instruct`
+  Dùng để đọc context đã truy xuất và trả lời câu hỏi.
+
+- Executor dự phòng qua API: `gemini-2.5-flash`
+  Chỉ được gọi khi Qwen không trả lời được hoặc trả về `KHÔNG TÌM THẤY`.
+
+- Tầng retrieval:
+  Dùng `sentence-transformers` + `FAISS` + `BM25` để tìm các đoạn văn bản liên quan.
+
+
+========================================
+2. File và thư mục ở thư mục gốc
+========================================
+
+- `README.md`
+  Tài liệu hướng dẫn cài môi trường, tải model, build index, fine-tune và đánh giá.
+
+- `infox.txt`
+  File này. Dùng để mô tả chức năng của các file/thư mục chính trong dự án.
+
+- `.env`
+  Biến môi trường thực tế đang dùng trên máy hiện tại.
+
+- `.env.example`
+  Mẫu cấu hình môi trường để tạo `.env`.
+
+- `.gitignore`
+  Danh sách file/thư mục không đưa vào git, ví dụ model, index, cache, output.
+
+- `.dockerignore`
+  Danh sách file bỏ qua khi build Docker image.
+
+- `requirements.txt`
+  Danh sách thư viện Python cần cài cho dự án.
+
+- `Dockerfile`
+  Mô tả cách build container cho dự án.
+
+- `docker-compose.yml`
+  Cấu hình chạy dự án bằng Docker Compose.
+
+- `main.py`
+  Entry point ứng dụng cấp cao. Hiện file này chỉ gọi `ui.app.main()`.
+  Lưu ý: trong repo hiện tại chưa thấy thư mục `ui/`, nên file này có thể là điểm nối cũ/chưa hoàn thiện.
+
+- `.agents/`
+  Thư mục phụ trợ cho môi trường agent/công cụ làm việc. Không phải phần lõi của ứng dụng.
+
+- `.codex/`
+  Thư mục nội bộ của môi trường Codex, không phải mã nguồn chính của dự án.
+
+- `QA/`
+  Bộ dữ liệu hỏi đáp phụ hoặc bản cũ.
+  Gồm:
+  `QA/questions.json`: danh sách câu hỏi.
+  `QA/reference_answers.json`: đáp án tham chiếu.
+
+- `cafef_news_/`
+  Thư mục liên quan dữ liệu tin tức CafeF hoặc vùng làm việc phụ. Hiện không phải phần trung tâm của pipeline chính.
+
+- `reports/`
+  Nơi dự kiến chứa báo cáo sinh ra trong quá trình chạy/thử nghiệm.
+
+- `storage_rag/`
+  Thư mục lưu trữ phụ cho RAG nếu pipeline cần thêm vùng nhớ ngoài/index riêng.
+
+- `output/`
+  Chứa file kết quả đầu ra.
+  `output/output.json`: file output mẫu hoặc output lần chạy gần nhất.
+
+
+========================================
+3. Thư mục `config/`
+========================================
+
+Thư mục này chứa cấu hình YAML của hệ thống.
+
+- `config/model_config.yaml`
+  Khai báo model planner, executor chính, executor dự phòng, embedder, cross-encoder.
+
+- `config/agent_config.yaml`
+  Cấu hình vận hành agent:
+  planner là model nào, executor chính là gì, fallback ra sao, retriever/reranker chạy thế nào.
+
+- `config/retrieval_config.yaml`
+  Cấu hình cho retrieval và chunking:
+  `top_k`, trọng số dense/sparse, kích thước chunk, đường dẫn dữ liệu, OCR/preprocessing.
+
+
+========================================
+4. Thư mục `data/`
+========================================
+
+Đây là vùng dữ liệu chính của dự án.
+
+- `data/raw_data/`
+  Chứa file đầu vào gốc, hiện là các báo cáo PDF.
+  Ví dụ:
+  `BFC-Q3.pdf`, `DPG-Q3.pdf`, `DPM-Q3.pdf`, `HVN-Q3.pdf`, `PNJ-Q3.pdf`, `REE-Q3.pdf`.
+
+- `data/processed_data/`
+  Chứa văn bản đã được trích xuất/OCR/chuẩn hóa từ file gốc.
+  Đây là đầu vào trực tiếp cho chunking, retrieval và huấn luyện/evaluate.
+
+- `data/train/`
+  Bộ dữ liệu train cho fine-tune:
+  `questions.json`: câu hỏi huấn luyện.
+  `reference_answers.json`: đáp án và evidence tham chiếu.
+
+- `data/test/`
+  Bộ dữ liệu test/evaluate:
+  `questions.json`: câu hỏi kiểm thử.
+  `reference_answers.json`: đáp án tham chiếu để chấm.
+
+- `data/chunks/`
+  Chứa các đoạn văn bản đã được cắt nhỏ sau bước build index.
+  `chunks.json`: danh sách chunk dùng cho retrieval.
+
+- `data/index/`
+  Chứa index retrieval đã build.
+  Thường gồm:
+  `retriever.pkl`: metadata của retriever.
+  `faiss/index.faiss`: FAISS index dense.
+  `faiss/metadata.pkl`: metadata mapping vector -> document.
+
+- `data/embeddings/`
+  Chứa vector embedding đã sinh ra.
+  `embeddings.npy`: ma trận embedding của các chunk.
+
+- `data/metadata/`
+  Chứa metadata mô tả dữ liệu và index.
+  `documents.json`: danh sách document nguồn.
+  `index_summary.json`: tóm tắt index hiện tại.
+  `raw_data_conversion_summary.json`: thống kê quá trình convert/OCR raw data.
+
+- `data/evaluation/`
+  Chứa kết quả chấm model/pipeline.
+  Ví dụ:
+  `qwen_executor_predictions.jsonl`
+  `qwen_executor_metrics.json`
+  `qwen_executor_base_predictions.jsonl`
+  `qwen_executor_base_metrics.json`
+
+
+========================================
+5. Thư mục `models/`
+========================================
+
+Đây là nơi chứa model local và adapter fine-tune.
+
+- `models/README.md`
+  Mô tả ngắn cách tổ chức thư mục model trong dự án.
+
+- `models/phi/`
+  Model planner local `microsoft/Phi-4-mini-instruct`.
+  Thư mục này thường chứa tokenizer, config, weight `.safetensors` hoặc `.bin`.
+
+- `models/qwen/`
+  Model executor chính local `Qwen/Qwen2.5-7B-Instruct`.
+
+- `models/qwen_executor_lora/`
+  Adapter LoRA sau khi fine-tune executor Qwen.
+  Các file quan trọng:
+  `adapter_config.json`: cấu hình adapter.
+  `adapter_model.safetensors`: trọng số adapter.
+  `training_args.bin`: tham số train.
+  `checkpoint-6/`: checkpoint trung gian của lần train trước.
+
+- `models/embedder/`
+  Model embedding `sentence-transformers/all-MiniLM-L6-v2`.
+  Dùng để biến chunk văn bản thành vector dense.
+
+- `models/cross_encoder/`
+  Model reranker `cross-encoder/ms-marco-MiniLM-L-6-v2`.
+  Dùng để chấm lại mức liên quan của các đoạn truy xuất được.
+
+Lưu ý:
+- Gemini là model API nên không có thư mục trọng số local tương ứng trong `models/`.
+
+
+========================================
+6. Thư mục `scripts/`
+========================================
+
+Đây là nơi chứa các script thao tác chính với dữ liệu và model.
+
+- `scripts/download_models.py`
+  Tải các model cần thiết về `models/`.
+  Hiện hỗ trợ tải Phi, Qwen, embedder, cross-encoder.
+
+- `scripts/convert_raw_data.py`
+  Chuyển dữ liệu thô sang văn bản đã xử lý.
+  Có vai trò normalize text OCR tiếng Việt.
+
+- `scripts/build_index.py`
+  Build retrieval index từ `data/processed_data/`.
+  Quy trình chính:
+  đọc file -> chuẩn hóa -> chia chunk -> tạo embedding -> build BM25/FAISS -> lưu metadata.
+  Có hỗ trợ `hybrid`, `dense_only`, `sparse_only`.
+
+- `scripts/fine-tune.py`
+  Fine-tune executor Qwen bằng LoRA/SFT trên bộ train.
+  Đây là script train chính cho model trả lời câu hỏi.
+
+- `scripts/fine-tune`
+  Wrapper nhỏ để gọi `scripts/fine-tune.py`.
+  Mục đích là giữ tương thích với cách gọi cũ.
+
+- `scripts/ppo.py`
+  Hiện đóng vai trò train/evaluate planner Phi local.
+  Tên file còn là `ppo.py` do lịch sử dự án, nhưng nội dung hiện là LoRA/SFT cho planner.
+
+- `scripts/evaluate_executor.py`
+  Chấm executor Qwen trên bộ test.
+  Nếu bật fallback và có `GEMINI_API_KEY`, script sẽ gọi Gemini khi Qwen không trả lời được.
+
+- `scripts/evaluate_planner.py`
+  Chấm riêng planner Phi:
+  kiểm tra JSON plan có hợp lệ không, chọn đúng source không, nhận diện đúng `qa_type` và `ticker` không.
+
+- `scripts/evaluate.py`
+  Pipeline evaluate cũ của dự án.
+  File này còn nhiều tham chiếu sang kiến trúc cũ như `LFM2` và `train_qwen_ppo`.
+  Vì vậy hiện không phải entrypoint chính của kiến trúc mới.
+
+
+========================================
+7. Thư mục `rag_engine/`
+========================================
+
+Đây là lõi xử lý RAG ở mức module Python.
+
+- `rag_engine/__init__.py`
+  File package init, dùng để export hoặc lazy import các thành phần trong `rag_engine`.
+
+- `rag_engine/schema.py`
+  Khai báo kiểu dữ liệu lõi:
+  document, retrieval result, metadata, plan-related schema.
+
+- `rag_engine/document_processor.py`
+  Tiền xử lý document:
+  load dữ liệu, làm sạch, chia chunk nếu đi theo pipeline object-oriented.
+
+- `rag_engine/embedder.py`
+  Wrapper cho model embedding `sentence-transformers`.
+  Dùng để encode text thành vector.
+
+- `rag_engine/vector_store.py`
+  Wrapper cho FAISS.
+  Có nhiệm vụ lưu vector, tìm kiếm dense và load/save index.
+
+- `rag_engine/retriever.py`
+  Lõi retrieval:
+  `BM25Index`: retrieval sparse.
+  `HybridRetriever`: kết hợp dense + sparse.
+
+- `rag_engine/index_manager.py`
+  Bản quản lý build/load index theo kiểu module.
+  Chức năng gần với `scripts/build_index.py`, nhưng ở mức lớp Python.
+
+
+========================================
+8. Thư mục `tools/`
+========================================
+
+Đây là các tiện ích dùng chung, không gắn chặt với một model cụ thể.
+
+- `tools/__init__.py`
+  Đánh dấu `tools` là Python package.
+
+- `tools/file_loader.py`
+  Đọc file từ thư mục dữ liệu.
+  Hỗ trợ các định dạng như `.txt`, `.pdf`, `.docx`, `.doc`, `.csv`, `.html`, `.md`.
+
+- `tools/text_splitter.py`
+  Chia document thành các chunk nhỏ hơn, giữ metadata nguồn.
+
+- `tools/evaluation.py`
+  Chứa metric dùng chung như:
+  `normalize_answer`, `exact_match`, `f1_score`.
+
+
+========================================
+9. Thư mục `frontend/`
+========================================
+
+Giao diện chat tĩnh, theo phong cách đơn giản gần giống ChatGPT.
+
+- `frontend/index.html`
+  Khung HTML chính của giao diện.
+
+- `frontend/style.css`
+  Toàn bộ CSS cho layout, sidebar, vùng chat, ô nhập.
+
+- `frontend/script.js`
+  Logic frontend:
+  gửi yêu cầu đến `/api/chat`,
+  render lịch sử chat,
+  hiển thị trạng thái chờ phản hồi.
+
+
+========================================
+10. Những điểm cần lưu ý
+========================================
+
+- `main.py` hiện tham chiếu đến `ui.app`, nhưng trong repo hiện chưa thấy thư mục `ui/`.
+  Điều này cho thấy phần chạy app đầy đủ có thể còn thiếu hoặc đang nằm ngoài snapshot hiện tại.
+
+- `scripts/evaluate.py` là pipeline cũ.
+  Nếu muốn chạy theo kiến trúc hiện tại, nên ưu tiên:
+  `scripts/build_index.py`
+  `scripts/fine-tune.py`
+  `scripts/ppo.py`
+  `scripts/evaluate_executor.py`
+  `scripts/evaluate_planner.py`
+
+- `models/`, `data/index/`, `data/embeddings/`, `data/chunks/` phần lớn là dữ liệu sinh ra hoặc trọng số lớn.
+  Chúng quan trọng để chạy hệ thống, nhưng không phải nơi chứa logic nghiệp vụ chính.
+
+
+========================================
+11. Luồng chạy ngắn gọn của dự án
+========================================
+
+1. Đặt báo cáo PDF vào `data/raw_data/`.
+2. Convert/OCR sang text trong `data/processed_data/`.
+3. Build retrieval index bằng `scripts/build_index.py`.
+4. Fine-tune executor Qwen bằng `scripts/fine-tune.py` nếu cần.
+5. Fine-tune planner Phi bằng `scripts/ppo.py` nếu cần.
+6. Khi hỏi đáp:
+   planner Phi chọn nguồn và sinh plan,
+   retriever lấy context,
+   Qwen trả lời trước,
+   nếu Qwen không có câu trả lời thì Gemini mới được dùng làm fallback.
