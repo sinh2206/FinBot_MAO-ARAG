@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -94,6 +95,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     data_dir = resolve_project_path(args.data_dir)
+    raw_dir = resolve_raw_data_dir(data_dir)
     chunk_dir = resolve_project_path(args.chunk_dir)
     index_dir = resolve_project_path(args.index_dir)
     embedding_dir = resolve_project_path(args.embedding_dir)
@@ -104,8 +106,17 @@ def main() -> None:
 
     loaded_files = load_directory(data_dir)
     source_documents = [normalize_document_text(item.to_document()) for item in loaded_files]
+    if not source_documents and raw_dir.exists():
+        raw_files = load_directory(raw_dir)
+        if raw_files:
+            source_documents = [normalize_document_text(item.to_document()) for item in raw_files]
+            write_processed_outputs(raw_files, data_dir)
     if not source_documents:
-        raise RuntimeError(f"No supported documents found in {data_dir}")
+        raise RuntimeError(
+            "No supported documents found. "
+            f"Checked {data_dir} and fallback raw directory {raw_dir}. "
+            "Place source files in data/raw_data/ or pre-convert them into data/processed_data/."
+        )
 
     chunks = split_documents(
         source_documents,
@@ -210,6 +221,17 @@ def resolve_project_path(path_value: str | Path) -> Path:
     return PROJECT_ROOT / path
 
 
+def resolve_raw_data_dir(data_dir: Path) -> Path:
+    candidates = [
+        data_dir.parent / "raw_data",
+        PROJECT_ROOT / "data" / "raw_data",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 def resolve_embedding_model(model_name: str | None, local_files_only: bool) -> Path | str:
     if not model_name:
         model_name = "models/embedder"
@@ -234,6 +256,14 @@ def resolve_embedding_model(model_name: str | None, local_files_only: bool) -> P
 
 def write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def write_processed_outputs(raw_files: list[Any], processed_dir: Path) -> None:
+    for item in raw_files:
+        relative_path = Path(item.metadata.get("relative_path") or item.path.name)
+        output = (processed_dir / relative_path).with_suffix(".txt")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(item.text.rstrip() + "\n", encoding="utf-8")
 
 
 def normalize_document_text(document: Document) -> Document:

@@ -36,18 +36,10 @@ data/training/*
 
 models/qwen/*
 models/phi/*
-models/llama/*
-models/minimax/*
-models/lfm2_rag/*
-models/lfm2_rag_lora/*
 models/embedder/*
 models/cross_encoder/*
-models/qwen_ppo/*
 !models/qwen/.gitkeep
 !models/phi/.gitkeep
-!models/minimax/.gitkeep
-!models/lfm2_rag/.gitkeep
-!models/lfm2_rag_lora/.gitkeep
 !models/embedder/.gitkeep
 !models/cross_encoder/.gitkeep
 !models/README.md

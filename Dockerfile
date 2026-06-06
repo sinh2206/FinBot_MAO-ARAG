@@ -38,4 +38,4 @@ RUN mkdir -p /app/.cache/huggingface /app/data /app/models /app/output /app/repo
 
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+CMD ["python", "-m", "backend.main"]

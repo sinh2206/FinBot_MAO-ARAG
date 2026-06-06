@@ -15,7 +15,7 @@ services:
       PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
-    command: ["python", "main.py"]
+    command: ["python", "-m", "backend.main"]
     ports:
       - "8000:8000"
     volumes:
